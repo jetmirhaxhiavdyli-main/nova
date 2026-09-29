@@ -1,0 +1,12 @@
+node_modules/
+dist/
+release/
+*.log
+.pnpm-store/
+.env*
+*.pem
+*.key
+builder-debug.yml
+win-unpacked/
+# Windows spelling-cache folders with garbled names
+/[^A-Za-z0-9._-]*/

@@ -1,0 +1,79 @@
+{
+  "name": "showcase-recorder",
+  "version": "0.1.18",
+  "private": true,
+  "description": "Nova: a free, open-source screen recorder and editor for Windows and macOS",
+  "license": "MIT",
+  "repository": {"type": "git", "url": "https://github.com/jetmirhaxhiavdyli-main/nova.git"},
+  "main": "electron/main.cjs",
+  "scripts": {
+    "build": "vite build",
+    "start": "electron .",
+    "dev": "vite --host 127.0.0.1",
+    "package": "vite build && electron-builder --dir --publish never",
+    "dist:win": "vite build && electron-builder --win nsis --x64 --publish never",
+    "release:win": "vite build && electron-builder --win nsis --x64 --publish always",
+    "test:updater": "node --test tests/updater.test.cjs"
+  },
+  "dependencies": {
+    "@heroui/react": "3.2.6",
+    "@heroui/styles": "3.2.6",
+    "@screen-capture/node": "^1.1.0",
+    "electron-updater": "^6.8.9",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "get-windows": "^9.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-react": "6.1.1",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "playwright": "1.63.0",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.0"
+  },
+  "build": {
+    "appId": "studio.showcase.recorder",
+    "productName": "Nova",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release/${version}"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Record your camera as an editable overlay.",
+        "NSMicrophoneUsageDescription": "Record narration with your screen recording.",
+        "NSScreenCaptureUsageDescription": "Record a screen or window that you select."
+      }
+    },
+    "win": {
+      "target": [{"target":"nsis","arch":["x64"]}],
+      "artifactName": "Nova-Setup-${version}-${arch}.${ext}",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [{"provider":"github","owner":"jetmirhaxhiavdyli-main","repo":"nova","private":false,"releaseType":"release"}],
+    "releaseInfo": {"releaseNotesFile":"RELEASE_NOTES.md"},
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**",
+      "node_modules/ffprobe-static/**",
+      "node_modules/uiohook-napi/**",
+      "node_modules/get-windows/**",
+      "node_modules/@screen-capture/**"
+    ]
+  }
+}
