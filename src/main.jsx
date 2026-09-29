@@ -125,7 +125,7 @@ function App() {
       const screens = items.filter(s => s.type === 'Screen'), wins = items.filter(s => s.type === 'Window');
       setDisplayId(old => screens.find(s => s.id === old)?.id || screens[0]?.id || null);
       setWindowId(old => wins.find(s => s.id === old)?.id || wins[0]?.id || null);
-      if (!items.length) setError('No screens found. On macOS, allow Screen Recording in System Settings → Privacy & Security, then restart Nova.');
+      if (!items.length) setError('No screens found. Check that a display is connected and restart Nova.');
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   }
 

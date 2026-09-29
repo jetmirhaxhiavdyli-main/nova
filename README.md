@@ -1,17 +1,30 @@
-# Nova
+# Nova: free, open-source screen recorder and editor for Windows
 
-A free, open-source screen recorder and editor. Record a display, window or area, then polish the clip in the editor (backgrounds, zooms, cursor, camera and microphone, trim and cut) and export to MP4, WebM or GIF.
+Nova records your screen and makes it look edited, automatically. Automatic zoom on clicks, a smooth cursor and beautiful backgrounds turn a plain screen recording into a polished product demo, tutorial or bug report. It is a free, open-source alternative to paid tools like Screen Studio, built for Windows.
 
-Built with Electron, React, [HeroUI](https://www.heroui.com) v3 and Tailwind CSS v4. Windows is the tested platform; macOS support exists but is untested.
+**[Download the latest version](https://github.com/jetmirhaxhiavdyli-main/nova/releases/latest)** (Windows 10/11, 64-bit)
 
 ## Features
 
-- Display, window and area capture at up to 60 fps, with optional camera and microphone
-- Auto-zoom on clicks, smooth cursor styles, editable zoom timeline
-- Editor with gradient, image and animated backgrounds, trims, splits and deleted sections
-- Export to MP4 (H.264), WebM (VP9) and GIF, with presets and quality levels (ffmpeg)
-- Projects you can save and reopen
-- Auto-update from GitHub Releases (installed Windows builds)
+- **Record anything:** a display, a window or a custom area at up to 60 fps, with optional webcam and microphone
+- **Automatic zoom:** zooms in where you click and type, with an editable zoom timeline
+- **Smooth cursor:** removes shaky mouse movement
+- **Beautiful backgrounds:** gradients, images and animated backgrounds, with padding, rounded corners and shadow
+- **Simple editor:** trim, split and delete sections, and place your camera bubble anywhere
+- **Export:** MP4 (H.264), WebM (VP9) and GIF, with presets, resolution and quality options (ffmpeg)
+- **Projects:** save and reopen your recordings
+- **Private:** everything stays on your PC. No account, no upload, no telemetry
+- **Auto-update:** installed builds update from GitHub Releases
+
+## Install
+
+Download `Nova-Setup-<version>-x64.exe` from the [latest release](https://github.com/jetmirhaxhiavdyli-main/nova/releases/latest) and run it. The installer is unsigned, so Windows SmartScreen may show a warning: choose **More info → Run anyway**.
+
+Stop a recording with **Ctrl+Shift+X** or the floating Stop button.
+
+## Platform support
+
+Nova is developed and tested on **Windows only**. There is no macOS or Linux build, and no macOS testing has been done.
 
 ## Run from source
 
@@ -25,26 +38,30 @@ pnpm start
 
 `pnpm dev` starts the Vite dev server for the UI only (the browser preview has no capture). Preview states are listed at the top of `src/main.jsx` (`?preview=export`, `?preview=editor`, and so on).
 
-Stop a recording with Ctrl+Shift+X (Command+Shift+X on macOS) or the floating Stop button. On macOS, grant Screen Recording and Accessibility permission when asked.
-
 ## Build an installer
 
 ```
 pnpm dist:win
 ```
 
-The installer is written to `release/<version>/`. `pnpm release:win` also publishes it to GitHub Releases (needs a `GH_TOKEN`); the updater reads the repository set in `package.json` → `build.publish`, so change it if you fork. Installers are unsigned, so Windows SmartScreen may warn.
+The installer is written to `release/<version>/`. `pnpm release:win` also publishes it to GitHub Releases (needs a `GH_TOKEN`); the updater reads the repository set in `package.json` → `build.publish`, so change it if you fork.
 
 ## Tests
 
 Most tests run with plain Node: `node --test tests/<file>`. On a machine without Node on the PATH, run them through Electron: `ELECTRON_RUN_AS_NODE=1 node_modules/electron/dist/electron.exe --test tests/<file>`.
 
-## Layout
+## Project layout
 
 - `src/`: React UI (recorder toolbar, pickers, editor, export dialog)
 - `electron/`: main process, capture, export (ffmpeg), projects, updater
 - `scripts/`: benchmark and validation scripts
 - `tests/`: unit tests
+
+Built with Electron, React, [HeroUI](https://www.heroui.com) v3 and Tailwind CSS v4.
+
+## Contributing
+
+Issues and pull requests are welcome. Please open an issue first for larger changes.
 
 ## License
 
