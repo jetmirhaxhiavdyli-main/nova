@@ -46,15 +46,8 @@ body { margin: 0; background: transparent; color: var(--foreground); -webkit-fon
 .dock { position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .dock__bar { display: flex; flex-direction: column; align-items: stretch; }
 
-/* ---------- Greeting (Figma: Recorder Toolbar) ---------- */
-.greeting { display: flex; align-items: center; gap: 10px; margin-bottom: -18px; padding: 16px 18px 35px 19px; border-radius: var(--radius-toolbar);
-  /* Solid white card with black content. */
-  background: #fff; color: #09090b; border: 1px solid rgba(0, 0, 0, 0.06);
-  animation: rise .35s var(--ease-fluid) both; }
-.greeting__wave { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 17px; background: rgba(0, 0, 0, 0.06); color: #09090b; }
 /* Brand: the logo (src/assets/brand/nova-logo.png) and app icon (nova-icon.png) are full-colour images, not tinted icons. */
 .icon-image { display: inline-block; flex-shrink: 0; object-fit: contain; user-select: none; }
-.greeting__brand { background: none; }
 /* App icon follows the theme: dark icon by default, light icon under :root.light (theme.js). */
 .app-icon--light, :root.light .app-icon--dark { display: none; }
 :root.light .app-icon--light { display: inline-block; }
@@ -88,6 +81,8 @@ body { margin: 0; background: transparent; color: var(--foreground); -webkit-fon
 .tip__skip:hover { color: var(--foreground); }
 .tip__skip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tip__count { font-size: 12px; line-height: 16px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.about__blurb { margin: 0 0 8px; font-size: 13px; line-height: 18px; color: var(--muted); }
+.about__credit { color: var(--foreground); font-weight: 500; user-select: text; }
 .about__theme { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .about__theme-label { font-size: 14px; line-height: 20px; font-weight: 600; }
 /* "Restart & update" preloader: covers the About dialog until the app quits to install. */
@@ -101,10 +96,6 @@ body { margin: 0; background: transparent; color: var(--foreground); -webkit-fon
 @keyframes update-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .update-installing__spinner { animation-duration: 2.4s; } }
 .editor-header .brand-mark { margin: 0 2px 0 -2px; }
-.greeting__text { display: flex; flex-direction: column; color: #09090b; }
-.greeting__text span { color: #3f3f46; }
-.greeting__text strong { font-size: 14px; line-height: 18px; font-weight: 600; }
-.greeting__text span { font-size: 12px; line-height: 18px; }
 /* Hand waves on arrival, then again every 4 s (the wave is the first ~28% of the cycle, then it rests). */
 .wave-anim { transform-origin: 70% 80%; animation: wave 4s ease-in-out .25s infinite; }
 @keyframes wave { 0%, 28%, 100% { transform: rotate(0); } 4%, 12% { transform: rotate(14deg); } 8%, 16% { transform: rotate(-8deg); } 21% { transform: rotate(6deg); } }
@@ -116,6 +107,10 @@ body { margin: 0; background: transparent; color: var(--foreground); -webkit-fon
   border-radius: var(--radius-toolbar); background: var(--background); border: 1px solid var(--hairline); box-shadow: var(--shadow-toolbar);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .toolbar__separator { width: 1px; height: 40px; background: var(--separator); flex-shrink: 0; }
+/* Drag handle at the toolbar's left edge (useDockDrag). */
+.toolbar__grip { display: grid; place-items: center; align-self: stretch; width: 20px; margin-left: -4px; flex-shrink: 0; border-radius: 10px; color: var(--muted); cursor: grab; touch-action: none; user-select: none; }
+.toolbar__grip:hover { color: var(--foreground); }
+.toolbar__grip:active { cursor: grabbing; }
 .toolbar .mode-button { flex-direction: column; gap: 5px; width: 76px; height: 60px; padding: 0; border-radius: 12px; color: var(--foreground); }
 .toolbar .mode-button .icon { margin: 0; }
 .mode-button__label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted); }

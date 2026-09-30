@@ -4,7 +4,8 @@ import { editorZooms } from './editorMotion.mjs';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Button } from '@heroui/react';
-import RecordToolbar, { Greeting } from './components/RecordToolbar';
+import RecordToolbar from './components/RecordToolbar';
+import useDockDrag from './useDockDrag';
 import { AREA_PRESETS, AreaPicker, DisplayPicker, RecentRecordings, WindowPicker } from './components/Pickers';
 import RecordingHud from './components/RecordingHud';
 import CameraBubble from './components/CameraBubble';
@@ -416,6 +417,7 @@ function App() {
   function cancelExport() { exportCancelled.current = true; editorExportAbort.current?.abort(); setExportNote('Cancelling…'); bridge?.cancelExport().catch(error => setExportNote(error.message)); }
 
   const recordingNow = phase === 'recording' || phase === 'stopping';
+  const { dockProps, gripProps } = useDockDrag(`${panel}|${!!notice}|${!!error}|${phase}`);
   const recordingSize = PREVIEW ? { width: 1920, height: 1080 } : null; // real size is read from the video in FinishedModal
   const preset = AREA_PRESETS.find(p => p.id === areaPreset);
 
@@ -434,12 +436,12 @@ function App() {
         <ExportModal exportedPath={exportedPath} sourceFps={sourceFps.current} size={exportSize} isOpen={exportOpen} onOpenChange={open => { if (!exportBusy.current) { setExportOpen(open); if (!open && exportedPath) { setExportedPath(null); resetRecording(); } } }} onExport={runExport} onCancel={cancelExport} busy={busy} note={exportNote} progress={exportProgress} />
       </> : recordingNow ? <>
         {cameraOn && <CameraBubble corner={cameraCorner} onCornerChange={setCameraCorner} stream={camera.stream} disconnected={camera.status === 'disconnected'} />}
-        <div className="dock"><RecordingHud seconds={seconds} paused={paused} stopping={phase === 'stopping'}
+        <div className="dock" {...dockProps}><RecordingHud seconds={seconds} paused={paused} stopping={phase === 'stopping'}
           onPauseToggle={togglePause} onRestart={restart} onDiscard={discard} onStop={stop} /></div>
       </> : <>
         {panel === 'area' && <AreaSelection rect={area} ratio={preset?.ratio}
           onChange={next => { setArea(next); }} scale={window.devicePixelRatio || 1} />}
-        <div className="dock">
+        <div className="dock" {...dockProps}>
           {notice && <div role="status" className="toast">{notice}</div>}
           {error && <div role="alert" className="toast">{error}</div>}
           {panel === 'display' && <DisplayPicker displays={displays} selectedId={displayId} onSelect={setDisplayId} onRecord={() => start(displayId)} busy={busy || loading} />}
@@ -453,8 +455,7 @@ function App() {
           {panel === 'camera' && <CameraPicker {...camera} onSelect={id => inputs?inputs.select('camera',id):setCamera(c=>({...c,selectedId:id}))} onRetry={() => inputs?.retry('camera')} onOpenSettings={bridge?.openPrivacySettings ? () => bridge.openPrivacySettings('camera') : undefined} />}
           {panel === 'mic' && <MicPicker {...mic} onSelect={id => inputs?inputs.select('mic',id):setMic(m=>({...m,selectedId:id}))} onRetry={() => inputs?.retry('mic')} onOpenSettings={bridge?.openPrivacySettings ? () => bridge.openPrivacySettings('microphone') : undefined} />}
           <div className="dock__bar">
-            {!panel && !error && <Greeting />}
-            <RecordToolbar activePanel={panel} onPanelChange={setPanel}
+            <RecordToolbar activePanel={panel} onPanelChange={setPanel} gripProps={gripProps}
               cameraOn={cameraOn} cameraName={camera.devices.find(d => d.id === camera.selectedId)?.name}
               micOn={micOn} micName={mic.devices.find(d => d.id === mic.selectedId)?.name}
               autoZoom={autoZoom} onAutoZoomChange={setAutoZoom}
@@ -462,7 +463,7 @@ function App() {
               onClose={() => window.close()} disabled={phase === 'starting'} />
           </div>
           {/* First-run tips point at the toolbar; they wait while a picker, error or start-up is showing. */}
-          <Tips set="toolbar" active={!panel && !error && phase === 'idle'} above=".greeting" />
+          <Tips set="toolbar" active={!panel && !error && phase === 'idle'} />
         </div>
       </>}
     </main>

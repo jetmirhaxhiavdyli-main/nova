@@ -9,24 +9,6 @@ const MODES = [
   { id: 'area', label: 'Area', icon: 'area' },
 ];
 
-function greetingFor(date = new Date()) {
-  const h = date.getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-}
-
-/** Greeting card shown above the toolbar when the app opens (Figma: "Recorder Toolbar"). */
-export function Greeting({ userName }) {
-  return (
-    <div className="greeting" role="status">
-      <span className="greeting__wave greeting__brand"><Icon name="brand" size={22} /></span>
-      <div className="greeting__text">
-        <strong>{greetingFor()}{userName ? `, ${userName}` : ''}</strong>
-        <span>What do you want to record today?</span>
-      </div>
-    </div>
-  );
-}
-
 /** Icon-only effect toggle with a tooltip naming it and its state (Auto-zoom, Smooth cursor). */
 function EffectToggle({ icon, label, description, isSelected, onChange, isDisabled }) {
   return (
@@ -70,9 +52,10 @@ function UpdateBell({ isDisabled }) {
 /**
  * Floating record toolbar (Figma: "Record toolbar").
  * Pure UI: every action is a callback so the capture logic can live elsewhere.
+ * `gripProps` (from useDockDrag) makes the grip at the left edge drag the whole dock.
  */
 export default function RecordToolbar({
-  activePanel, onPanelChange,
+  activePanel, onPanelChange, gripProps,
   cameraOn, cameraName,
   micOn, micName,
   autoZoom, onAutoZoomChange,
@@ -82,6 +65,7 @@ export default function RecordToolbar({
   const toggle = id => onPanelChange(activePanel === id ? null : id);
   return (
     <div className="toolbar" role="toolbar" aria-label="New recording">
+      {gripProps && <div className="toolbar__grip" role="presentation" title="Drag to move · double-click to reset" {...gripProps}><Icon name="grip" size={14} /></div>}
       {MODES.map(mode => (
         <ToggleButton
           key={mode.id}

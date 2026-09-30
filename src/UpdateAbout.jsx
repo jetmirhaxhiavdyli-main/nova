@@ -57,6 +57,8 @@ export default function UpdateAbout({busy,unsaved}){
         <Modal.CloseTrigger aria-label="Close About" isDisabled={installing}/>
         <Modal.Header><Icon name="app-icon" size={56} className="brand-mark--about app-icon--dark" /><Icon name="app-icon-light" size={56} className="brand-mark--about app-icon--light" /><Modal.Heading>About Nova</Modal.Heading><p>Version {state.currentVersion}</p></Modal.Header>
         <Modal.Body>
+          <p className="about__blurb">This is a passion project of mine that I decided to see what people make of it.</p>
+          <p className="about__blurb about__credit">Created by: Jetmir Haxhiavdyli - justmila.design</p>
           <ThemeSwitch/>
           {ready&&<h3>Nova {state.version} is ready</h3>}
           <p role="status">{labels[state.status]} {state.status==='downloading'?`${Math.round(state.percent)}%`:''}</p>
