@@ -26,7 +26,7 @@ Nova records your screen and makes it look edited, automatically. Automatic zoom
 
 ## Install
 
-Download `Nova-Setup-<version>-x64.exe` from the [latest release](https://github.com/jetmirhaxhiavdyli-main/nova/releases/latest) and run it. The installer is unsigned, so Windows SmartScreen may show a warning: choose **More info → Run anyway**.
+Download [`Nova-Setup.exe`](https://github.com/jetmirhaxhiavdyli-main/nova/releases/latest/download/Nova-Setup.exe) (always the newest version) and run it. All releases are listed on the [releases page](https://github.com/jetmirhaxhiavdyli-main/nova/releases). The installer is unsigned, so Windows SmartScreen may show a warning: choose **More info → Run anyway**.
 
 Stop a recording with **Ctrl+Shift+X** or the floating Stop button.
 

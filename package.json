@@ -53,7 +53,7 @@
     ],
     "win": {
       "target": [{"target":"nsis","arch":["x64"]}],
-      "artifactName": "Nova-Setup-${version}-${arch}.${ext}",
+      "artifactName": "Nova-Setup.${ext}",
       "icon": "build/icon.png"
     },
     "nsis": {
