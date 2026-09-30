@@ -1,5 +1,6 @@
-## Nova 1.0
+## Nova 1.0.1
 
-- Nova is now free and open source under the MIT license. No license key is needed.
-- Record a display, window or area, polish it in the editor, and export to MP4, WebM or GIF.
-- Removed: share links.
+- New: drag the recorder anywhere on your screen with the grip at the left edge of the toolbar. Double-click the grip to put it back. Nova remembers where you left it.
+- Changed: removed the greeting card above the toolbar.
+- Changed: About now has a short note about the project and its creator.
+- Changed: Nova is Windows-only, and the docs now say so.
