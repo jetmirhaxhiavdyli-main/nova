@@ -4,6 +4,14 @@ Nova records your screen and makes it look edited, automatically. Automatic zoom
 
 **[Download the latest version](https://github.com/jetmirhaxhiavdyli-main/nova/releases/latest)** (Windows 10/11, 64-bit)
 
+## Screenshots
+
+![Nova editor: gradient background, camera bubble, zoom timeline](docs/screenshots/editor.png)
+
+| | |
+|---|---|
+| ![Recorder toolbar](docs/screenshots/recorder.png) **Record** a display, window or area | ![Export dialog](docs/screenshots/export.png) **Export** to MP4, WebM or GIF |
+| ![Backgrounds panel](docs/screenshots/backgrounds.png) **Backgrounds**: gradients, images, animated | ![Zoom settings](docs/screenshots/zoom.png) **Zooms** you can edit on the timeline |
 ## Features
 
 - **Record anything:** a display, a window or a custom area at up to 60 fps, with optional webcam and microphone
