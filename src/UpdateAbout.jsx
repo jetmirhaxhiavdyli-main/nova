@@ -3,14 +3,18 @@ import {Button,Modal} from '@heroui/react';
 import Icon from './components/Icon';
 import {Segmented,SwitchField} from './components/editor/panels/PanelShell';
 import {THEMES,useTheme} from './theme';
+import {RECORDING_FPS,useRecordingFps} from './recordingFps';
 import {resetTips} from './components/Tips';
 
 /** Appearance row in About: System / Light / Dark, plus "Show tips again" for the first-run tips. */
 function ThemeSwitch(){
   const [theme,setTheme]=useTheme();
+  const [fps,setFps]=useRecordingFps();
   const [reset,setReset]=useState(false);
   return <>
     <div className="about__theme"><span className="about__theme-label">Appearance</span><Segmented label="Appearance" value={theme} options={THEMES} onChange={setTheme}/></div>
+    <div className="about__theme"><span className="about__theme-label">Recording frame rate</span><Segmented label="Recording frame rate" value={String(fps)} options={RECORDING_FPS} onChange={id=>setFps(Number(id))}/></div>
+    <p className="about__note">60 fps is smoother but uses more CPU. It applies to your next recording.</p>
     <div className="about__theme"><span className="about__theme-label">Tips</span><Button size="sm" variant="secondary" isDisabled={reset} onPress={()=>{resetTips();setReset(true);}}>{reset?'Tips will show again':'Show tips again'}</Button></div>
   </>;
 }

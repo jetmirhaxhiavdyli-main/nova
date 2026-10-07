@@ -24,10 +24,12 @@ const updates=require('./updater.cjs').createUpdater({app,log:diagnostics.log,
   notify:state=>{if(window&&!window.isDestroyed())window.webContents.send('update-state',state);},
   canInstall:()=>!recording&&!exportJob&&!updateActivity.busy&&!updateActivity.unsaved,
 });
+const ffmpegPath = require('ffmpeg-static').replace(/app\.asar([\\/])/, 'app.asar.unpacked$1');
 const nativeCapture = require('./nativeCaptureHost.cjs').createNativeCapture({ desktopCapturer, screen,
   utilityProcess:require('electron').utilityProcess,MessageChannelMain:require('electron').MessageChannelMain,
   deliverPort:(message,port)=>window.webContents.postMessage('native-capture-port',message,[port]),
   log:message=>diagnostics.log.info(message),
+  ffmpeg:ffmpegPath,tempDir:require('node:os').tmpdir(),
 });
 const clicks = require('./clickTracking.cjs').createClickTracking({ screen, systemPreferences, desktopCapturer,
   canSend: () => recording && !overlayInteractive && window && !window.isDestroyed(),
@@ -202,7 +204,21 @@ else app.whenReady().then(() => {
     if (typeof sourceId !== 'string') throw new Error('Invalid source');
     await clicks.start(sourceId);
   });
-  ipcMain.handle('native-capture-start', (event, sourceId, fps, token, selection) => { assertSender(event); if (typeof sourceId !== 'string'||typeof token!=='string') throw new Error('Invalid source'); return nativeCapture.start(sourceId, fps === 60 ? 60 : 30,token,selection); });
+  ipcMain.handle('native-capture-start', (event, sourceId, fps, token, selection, record) => { assertSender(event); if (typeof sourceId !== 'string'||typeof token!=='string') throw new Error('Invalid source'); return nativeCapture.start(sourceId, fps === 60 ? 60 : 30,token,selection,record === true); });
+  ipcMain.handle('native-capture-command', (event, id, type) => { assertSender(event); if (!['go', 'pause', 'resume', 'ping'].includes(type)) throw new Error('Invalid command'); return nativeCapture.command(id, type); });
+  // Finishes the encoded recording; an optional microphone track (WebM/Opus) is muxed in without re-encoding.
+  ipcMain.handle('native-capture-finish', async (event, id, audio) => {
+    assertSender(event);
+    const file = await nativeCapture.finish(id), mux = file.replace(/\.mkv$/, '-mux.mkv'), mic = file.replace(/\.mkv$/, '-mic.webm');
+    try {
+      if (audio instanceof Uint8Array && audio.length) {
+        await fs.writeFile(mic, audio);
+        await require('node:util').promisify(require('node:child_process').execFile)(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-i', file, '-i', mic, '-map', '0:v', '-map', '1:a', '-c', 'copy', '-f', 'matroska', '-y', mux], { windowsHide: true });
+        return new Uint8Array(await fs.readFile(mux));
+      }
+      return new Uint8Array(await fs.readFile(file));
+    } finally { for (const f of [file, mux, mic]) fs.rm(f, { force: true }).catch(() => {}); }
+  });
   ipcMain.handle('native-capture-stop', (event,id) => { assertSender(event); return nativeCapture.stop(id); });
   ipcMain.handle('save', async (event, bytes) => {
     assertSender(event);
@@ -235,6 +251,14 @@ else app.whenReady().then(() => {
     }
   }
   ipcMain.handle('export-cancel', event => { assertSender(event); exportJob?.abort(); });
+  // The real frame times of a recording (its spacing is uneven), so the editor export can pick the exact frames.
+  ipcMain.handle('frame-times', async (event, bytes) => {
+    assertSender(event);
+    if (!(bytes instanceof Uint8Array) || !bytes.length) throw new Error('Empty recording.');
+    const folder = await fs.mkdtemp(path.join(app.getPath('temp'), 'showcase-frames-'));
+    try { const file = path.join(folder, 'recording.webm'); await fs.writeFile(file, bytes); return await require('./export.cjs').frameTimes(file); }
+    finally { await fs.rm(folder, { recursive: true, force: true }).catch(() => {}); }
+  });
   ipcMain.handle('editor-export-start', async (event, options) => {
     assertSender(event);
     if(exportJob) throw Error('An export is already running.');

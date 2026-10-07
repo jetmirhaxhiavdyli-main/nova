@@ -2,6 +2,7 @@ import { IMAGE_FILL, outputDims, animatedBackground, animatedBackgroundFrame, ba
 import { editorCamera, editorCursor } from './editorMotion.mjs';
 import { prepareTrimmedExport } from './trimExport.mjs';
 import { cutPlan, mapClicks } from './cutExport.mjs';
+import { pickFrame } from './frameSelect.mjs';
 import { CAMERA_DEFAULTS, cameraRect } from './components/editor/constants.js';
 
 export function paintCamera(c,source,width,height,settings) {
@@ -102,6 +103,22 @@ function waitVideo(video,event,action,signal) {
   });
 }
 
+/** Seeks to a frame's exact time and waits until the player has actually presented it. Drawing right after 'seeked' can still give the previous frame, which showed up as out-of-order and held frames in fast animations. */
+async function showFrame(video,time,signal) {
+  const presented=video.requestVideoFrameCallback?new Promise(resolve=>video.requestVideoFrameCallback(resolve)):null;
+  await waitVideo(video,'seeked',()=>{video.currentTime=time;},signal);
+  if(presented) await Promise.race([presented,new Promise(resolve=>setTimeout(resolve,500))]);
+}
+/** The recording's real frame times (uneven for a screen recording), or null to fall back to plain seeking. */
+async function loadFrameTimes(recording,bridge,signal) {
+  if(!bridge.frameTimes) return null;
+  try {
+    const bytes=new Uint8Array(await (await fetch(recording.url,{signal})).arrayBuffer());
+    const times=await bridge.frameTimes(bytes);
+    return Array.isArray(times)&&times.length>1?[...new Set(times)]:null;
+  } catch(error) {if(signal.aborted) throw error;return null;}
+}
+
 export async function exportEditor(recording,edits,options,bridge,signal,onProgress,onMetrics = () => {}) {
   if(edits.audio.music!=='none') throw Error('Music tracks are not connected yet. Select None to export.');
   const removed=edits.removed||[];
@@ -129,6 +146,7 @@ export async function exportEditor(recording,edits,options,bridge,signal,onProgr
     const audioSource=recording.hasMic&&options.format!=='GIF'?new Uint8Array(await (await fetch(recording.url,{signal})).arrayBuffer()):undefined;
     await bridge.editorExportStart({...options,frameFormat,audioSource,audioStart:trimmed.sourceStart,audioSegments,audioMutes:plan.mutes,audioVolume:(edits.audio.voice??100)/100,width:canvas.width,height:canvas.height,duration,clicks:edits.cursor.clickSound&&!edits.cursor.hidden?mapClicks(recording.clicks,plan):[]});begun=true;
     const frames=Math.ceil(duration*options.fps);
+    const times=await loadFrameTimes(recording,bridge,signal);let shown=-1;
     let lastProgress=-1;
     for(let i=0;i<frames;i++) {
       if(signal.aborted) throw Error('Export cancelled.');
@@ -136,7 +154,11 @@ export async function exportEditor(recording,edits,options,bridge,signal,onProgr
       const t=plan.toTrimmed(i/options.fps);
       const sourceTime=trimmed.sourceStart+t;
       let measuredAt=performance.now();
-      if(Math.abs(video.currentTime-sourceTime)>1e-7) await waitVideo(video,'seeked',()=>{video.currentTime=sourceTime;},signal);
+      if(times) {
+        // Exact source frames, in order, each confirmed on screen before it is drawn (see showFrame).
+        const k=pickFrame(times,sourceTime,options.fps);
+        if(k!==shown) {const at=times[k]+0.0002;if(Math.abs(video.currentTime-at)>1e-7) await showFrame(video,at,signal);shown=k;}
+      } else if(Math.abs(video.currentTime-sourceTime)>1e-7) await waitVideo(video,'seeked',()=>{video.currentTime=sourceTime;},signal);
       if(webcam){const ct=Number.isFinite(webcam.duration)?Math.min(sourceTime,Math.max(0,webcam.duration-.001)):sourceTime;
         if(Math.abs(webcam.currentTime-ct)>1e-7)await waitVideo(webcam,'seeked',()=>{webcam.currentTime=ct;},signal);}
       metrics.decodeMs+=performance.now()-measuredAt;measuredAt=performance.now();

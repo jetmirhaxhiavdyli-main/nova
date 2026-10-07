@@ -82,4 +82,9 @@ async function encode(input, output, options, { signal, onProgress = () => {}, d
   if (!(await fs.stat(output)).size) throw new Error('The exported file is empty.');
   onProgress(100);
 }
-module.exports = { validate, encode, probe, run, ffmpeg, PRESETS, codecArgs, RGB_TO_BT709, BT709_TAGS };
+/** Presentation time (seconds) of every video frame, in order. A recording's frame spacing is uneven, and the editor export needs the real times. */
+async function frameTimes(file, signal) {
+  const text = await run(ffprobe, ['-v','error','-select_streams','v:0','-show_entries','frame=best_effort_timestamp_time','-of','csv=p=0',file], { signal });
+  return text.split(String.fromCharCode(10)).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+}
+module.exports = { validate, encode, probe, frameTimes, run, ffmpeg, PRESETS, codecArgs, RGB_TO_BT709, BT709_TAGS };

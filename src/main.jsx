@@ -13,6 +13,7 @@ import AreaSelection from './components/AreaSelection';
 import { lockedSize } from './areaRatio.mjs';
 import FinishedModal from './components/FinishedModal';
 import ScreenshotSelect from './components/ScreenshotSelect';
+import { useRecordingFps } from './recordingFps';
 import ExportModal from './components/ExportModal';
 import Editor from './components/editor/Editor';
 import { PREVIEW_DEVICES, PREVIEW_EDITOR, PREVIEW_FOLDERS, PREVIEW_RECORDINGS, PREVIEW_SOURCES } from './previewData';
@@ -26,6 +27,7 @@ import { recordMotion } from './recordingMotion.mjs';
 import { reviewEdits } from './reviewEdits.mjs';
 import { recordingMime } from './recordingCodec.mjs';
 import { createNativeCapture } from './nativeCapture.mjs';
+import { createFfmpegCapture, encodedRecorder } from './ffmpegCapture.mjs';
 import { createDeviceInputs } from './deviceInputs.mjs';
 import { KEYFRAME_MS, recordCamera } from './cameraRecording.mjs';
 import { prepareRecordingInputs } from './recordingStartup.mjs';
@@ -74,8 +76,8 @@ function App() {
   const micOn = !!mic.selectedId && mic.status !== 'denied' && mic.status !== 'none';
   const [autoZoom, setAutoZoom] = useState(true);
   const [smoothCursor, setSmoothCursor] = useState(true);
-  // Recording frame rate: 30 fps keeps the PC responsive (60 cost ~41% vs ~31% CPU). Cursor/zoom events stay at 16 ms precision.
-  const captureFps = 30;
+  // Recording frame rate (About): 30 fps keeps the PC responsive (60 cost ~41% vs ~31% CPU). Cursor/zoom events stay at 16 ms precision.
+  const [captureFps] = useRecordingFps();
   const sourceFps = useRef(null);
   // Session-only originals and timed motion, ready for the future editor.
   const editorAsset = useRef(null), captureSession = useRef(null), pausePending = useRef(false);
@@ -173,7 +175,11 @@ function App() {
       const ready=await prepareRecordingInputs(inputs,async()=>{
         if(!smooth)return standard();
         // Startup has an independent watchdog; a heartbeat detects a stalled capture process.
-        try { return await createNativeCapture(bridge,sourceId,error=>{if(error)setError(error.message);stop();},captureFps,selection); }
+        const ended=error=>{if(error)setError(error.message);stop();};
+        // Preferred: encode with ffmpeg (OBS-style). If that can't start, use the canvas + MediaRecorder capture.
+        try { return await createFfmpegCapture(bridge,sourceId,ended,captureFps,selection); }
+        catch (error) { console.warn('ffmpeg capture unavailable:', error?.message); startupTimings.ffmpegFallback = error?.message; }
+        try { return await createNativeCapture(bridge,sourceId,ended,captureFps,selection); }
         catch (error) {
           // Fall back to standard capture (the system cursor is recorded as is) instead of failing the recording.
           console.warn('Smooth cursor capture unavailable, using standard capture:', error?.message);
@@ -199,12 +205,12 @@ function App() {
       }),12000,'The recording area did not start',late=>late.dispose());
       startupTimings.composition=Math.round(performance.now()-compositionBegan);
       // Preserve codec preference and quality. Codec support alone does not prove hardware encoding.
-      const mimeType = recordingMime({width:crop?.width||sourceSize.width,height:crop?.height||sourceSize.height,hasMic:!!devices.mic},type=>MediaRecorder.isTypeSupported(type));
+      const mimeType = native.encoded ? 'video/webm;codecs=h264' : recordingMime({width:crop?.width||sourceSize.width,height:crop?.height||sourceSize.height,hasMic:!!devices.mic},type=>MediaRecorder.isTypeSupported(type));
       if (!mimeType) throw new Error('This device cannot encode WebM recordings.');
       const withMic=video=>new MediaStream([...video.getVideoTracks(),...(devices.mic?.getAudioTracks()||[])]);
       // A keyframe every second keeps editor/export seeks cheap (the default is a single keyframe at the start).
-      const recorderOptions = { mimeType, videoBitsPerSecond: 16000000, videoKeyFrameIntervalDuration: KEYFRAME_MS };
-      const recorder = new MediaRecorder(withMic(cropped?.stream || capture), recorderOptions);
+      const recorderOptions = { mimeType, videoBitsPerSecond: captureFps === 60 ? 24000000 : 16000000, videoKeyFrameIntervalDuration: KEYFRAME_MS };
+      const recorder = native.encoded ? encodedRecorder(native, devices.mic?.getAudioTracks() || []) : new MediaRecorder(withMic(cropped?.stream || capture), recorderOptions);
       cameraBlob.current=null;
       cameraRecording.current=devices.camera?recordCamera(devices.camera,e=>{setError(e.message);stop();}):null;
       // One full-quality original; review/editor/export render the editable effects afterward.
@@ -212,7 +218,7 @@ function App() {
       recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
       recorder.onerror = () => { failed = true; setError('Recording ran into a problem. Any footage captured so far is kept.'); stop(); };
       recorder.onstop = async () => {
-        const end = recorder.state === 'inactive' && pausedAt.current ? pausedAt.current : performance.now();
+        const end = recorder.state === 'inactive' && pausedAt.current ? pausedAt.current : recorder.stoppedAt || performance.now();
         clipDuration.current = Math.max(0, (end - started.current - pausedFor.current) / 1000);
         const cameraDone=cameraRecording.current?.finish();
         motion?.dispose();cropped?.dispose();native?.dispose();captureSession.current=null;
@@ -244,7 +250,7 @@ function App() {
       // Local timings only (no media/device names) to diagnose hardware-specific startup stalls.
       startupTimings.total=Math.round(performance.now()-startupBegan);
       startupTimings.codec=mimeType;
-      startupTimings.capture={path:native.sourceSize?'native':'standard',width:crop?.width||sourceSize.width,height:crop?.height||sourceSize.height,fps:captureFps,screenEncoders:1,cameraEncoders:devices.camera?1:0,videoBitsPerSecond:recorder.videoBitsPerSecond,encoderImplementation:'unknown'};
+      startupTimings.capture={path:native.encoded?'ffmpeg':native.sourceSize?'native':'standard',width:crop?.width||sourceSize.width,height:crop?.height||sourceSize.height,fps:captureFps,screenEncoders:1,cameraEncoders:devices.camera?1:0,videoBitsPerSecond:recorder.videoBitsPerSecond,encoderImplementation:'unknown'};
       console.info('Recording startup (ms)',startupTimings);
       diag(startupTimings.fallback ? 'warn' : 'info', `record started ${JSON.stringify(startupTimings)}`);
     } catch (e) {

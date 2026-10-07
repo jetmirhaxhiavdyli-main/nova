@@ -53,9 +53,9 @@ export default function BackgroundPanel({ background, set, onClose }) {
 
   return (
     <PanelShell title="Background" onClose={onClose}>
-      <Segmented label="Background type" value={background.mode} options={TYPES} onChange={mode => set('background', { mode })} />
+      <Segmented label="Background type" value={background.mode} options={TYPES} onChange={mode => { set('background', { mode }); if (mode === 'none') set('output', { size: 'original' }); }} />
 
-      {background.mode === 'none' && <p className="editor-panel__hint">Your recording plays edge to edge, exactly as captured. Pick a preset or color to frame it.</p>}
+      {background.mode === 'none' && <p className="editor-panel__hint">Your recording plays edge to edge at its own size, exactly as captured (Output size is set to Match recording, so nothing is resized). Pick a preset or color to frame it.</p>}
 
       {background.mode === 'preset' && <>
         <Segmented label="Preset type" value={kind} options={KINDS} onChange={pickKind} />
