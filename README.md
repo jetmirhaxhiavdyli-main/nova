@@ -15,6 +15,8 @@ Nova records your screen and makes it look edited, automatically. Automatic zoom
 ## Features
 
 - **Record anything:** a display, a window or a custom area at up to 60 fps, with optional webcam and microphone
+- **Screenshots:** press a shortcut (default **Ctrl+Shift+5**, configurable) from anywhere, drag an area, and it is copied to your clipboard, with a quick preview to crop, copy or save. Nova keeps running in the tray
+- **Area recording:** exact width and height, with an aspect ratio lock
 - **Automatic zoom:** zooms in where you click and type, with an editable zoom timeline
 - **Smooth cursor:** removes shaky mouse movement
 - **Beautiful backgrounds:** gradients, images and animated backgrounds, with padding, rounded corners and shadow

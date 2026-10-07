@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Dropdown } from '@heroui/react';
 import Icon from './Icon';
+import { SwitchField } from './editor/panels/PanelShell';
+import { ratioText } from '../areaRatio.mjs';
 
 /** Popover shell shared by every list above the toolbar (Figma: "Display picker" etc.). */
 export function Panel({ title, meta, footer, children, label }) {
@@ -105,7 +107,7 @@ export const AREA_PRESETS = [
 function SizeFields({ size, max, onSize }) {
   const commit = (key, raw) => {
     const v = Math.min(max[key], Math.max(120, Math.round(Number(raw) || 0)));
-    if (v !== size[key]) onSize({ ...size, [key]: v });
+    if (v !== size[key]) onSize({ ...size, [key]: v }, key);
   };
   return (
     <div className="area-size">
@@ -119,7 +121,7 @@ function SizeFields({ size, max, onSize }) {
   );
 }
 
-export function AreaPicker({ presetId, customSize, onSelect, onSize, max, onRecord, busy }) {
+export function AreaPicker({ presetId, customSize, onSelect, onSize, max, locked, ratio, onLockChange, onRecord, busy }) {
   return (
     <Panel title="Choose an area" meta="Drag on screen to adjust"
       footer={<Footer hint="Custom recording area" action="Record area" onAction={onRecord} isDisabled={busy} />}>
@@ -132,6 +134,7 @@ export function AreaPicker({ presetId, customSize, onSelect, onSize, max, onReco
         ))}
       </div>
       <SizeFields size={customSize} max={max} onSize={onSize} />
+      <SwitchField label="Lock aspect ratio" description={locked && ratio ? `Locked at ${ratioText(ratio)}` : 'Keep the shape when you resize'} isSelected={!!locked} onChange={onLockChange} />
     </Panel>
   );
 }

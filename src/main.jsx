@@ -10,7 +10,9 @@ import { AREA_PRESETS, AreaPicker, DisplayPicker, RecentRecordings, WindowPicker
 import RecordingHud from './components/RecordingHud';
 import CameraBubble from './components/CameraBubble';
 import AreaSelection from './components/AreaSelection';
+import { lockedSize } from './areaRatio.mjs';
 import FinishedModal from './components/FinishedModal';
+import ScreenshotSelect from './components/ScreenshotSelect';
 import ExportModal from './components/ExportModal';
 import Editor from './components/editor/Editor';
 import { PREVIEW_DEVICES, PREVIEW_EDITOR, PREVIEW_FOLDERS, PREVIEW_RECORDINGS, PREVIEW_SOURCES } from './previewData';
@@ -82,6 +84,7 @@ function App() {
   const [displayId, setDisplayId] = useState(null);
   const [windowId, setWindowId] = useState(null);
   const [areaPreset, setAreaPreset] = useState('custom');
+  const [areaLock, setAreaLock] = useState(false), [areaRatio, setAreaRatio] = useState(16 / 9); // lock aspect ratio for the recording area
   const [area, setArea] = useState({ x: 58, y: 37, width: 480, height: 270 });
   const [recents, setRecents] = useState(bridge ? [] : PREVIEW_RECORDINGS);
 
@@ -436,10 +439,10 @@ function App() {
         <ExportModal exportedPath={exportedPath} sourceFps={sourceFps.current} size={exportSize} isOpen={exportOpen} onOpenChange={open => { if (!exportBusy.current) { setExportOpen(open); if (!open && exportedPath) { setExportedPath(null); resetRecording(); } } }} onExport={runExport} onCancel={cancelExport} busy={busy} note={exportNote} progress={exportProgress} />
       </> : recordingNow ? <>
         {cameraOn && <CameraBubble corner={cameraCorner} onCornerChange={setCameraCorner} stream={camera.stream} disconnected={camera.status === 'disconnected'} />}
-        <div className="dock" {...dockProps}><RecordingHud seconds={seconds} paused={paused} stopping={phase === 'stopping'}
+        <div className="dock" {...dockProps}><div className="toolbar-glow toolbar-glow--rec" data-paused={paused || undefined} aria-hidden="true"><span /><span /><span /></div><RecordingHud seconds={seconds} paused={paused} stopping={phase === 'stopping'}
           onPauseToggle={togglePause} onRestart={restart} onDiscard={discard} onStop={stop} /></div>
       </> : <>
-        {panel === 'area' && <AreaSelection rect={area} ratio={preset?.ratio}
+        {panel === 'area' && <AreaSelection rect={area} ratio={areaLock ? areaRatio : preset?.ratio}
           onChange={next => { setArea(next); }} scale={window.devicePixelRatio || 1} />}
         <div className="dock" {...dockProps}>
           {notice && <div role="status" className="toast">{notice}</div>}
@@ -447,8 +450,14 @@ function App() {
           {panel === 'display' && <DisplayPicker displays={displays} selectedId={displayId} onSelect={setDisplayId} onRecord={() => start(displayId)} busy={busy || loading} />}
           {panel === 'window' && <WindowPicker windows={windows} selectedId={windowId} onSelect={setWindowId} onRecord={() => start(windowId)} busy={busy || loading} />}
           {panel === 'area' && <AreaPicker presetId={areaPreset} customSize={{ width: Math.round(area.width * (window.devicePixelRatio || 1)), height: Math.round(area.height * (window.devicePixelRatio || 1)) }}
-            onSelect={id => { setAreaPreset(id); const p = AREA_PRESETS.find(x => x.id === id); if (p?.ratio) setArea(a => ({ ...a, height: Math.round(a.width / p.ratio) })); }}
-            onSize={({ width, height }) => { const s = window.devicePixelRatio || 1; setAreaPreset('custom'); setArea(a => ({ ...a, width: Math.round(width / s), height: Math.round(height / s) })); }}
+            onSelect={id => { setAreaPreset(id); const p = AREA_PRESETS.find(x => x.id === id); if (p?.ratio) { setAreaRatio(p.ratio); setArea(a => ({ ...a, height: Math.round(a.width / p.ratio) })); } }}
+            onSize={(size, changed) => {
+              const s = window.devicePixelRatio || 1, screen = { width: Math.round(window.innerWidth * s), height: Math.round(window.innerHeight * s) };
+              const { width, height } = areaLock ? lockedSize(size, changed, areaRatio, screen) : size;
+              setAreaPreset('custom'); setArea(a => ({ ...a, width: Math.round(width / s), height: Math.round(height / s) }));
+            }}
+            locked={areaLock} ratio={areaRatio}
+            onLockChange={on => { setAreaLock(on); if (on) setAreaRatio(area.width / area.height); }}
             max={{ width: Math.round(window.innerWidth * (window.devicePixelRatio || 1)), height: Math.round(window.innerHeight * (window.devicePixelRatio || 1)) }}
             onRecord={recordArea} busy={busy} />}
           {panel === 'recents' && <RecentRecordings recordings={recents} folders={folders} {...folderActions} onOpen={reopenProject}
@@ -457,12 +466,13 @@ function App() {
           {panel === 'camera' && <CameraPicker {...camera} onSelect={id => inputs?inputs.select('camera',id):setCamera(c=>({...c,selectedId:id}))} onRetry={() => inputs?.retry('camera')} onOpenSettings={bridge?.openPrivacySettings ? () => bridge.openPrivacySettings('camera') : undefined} />}
           {panel === 'mic' && <MicPicker {...mic} onSelect={id => inputs?inputs.select('mic',id):setMic(m=>({...m,selectedId:id}))} onRetry={() => inputs?.retry('mic')} onOpenSettings={bridge?.openPrivacySettings ? () => bridge.openPrivacySettings('microphone') : undefined} />}
           <div className="dock__bar">
+            <div className="toolbar-glow" aria-hidden="true"><span /><span /><span /></div>
             <RecordToolbar activePanel={panel} onPanelChange={setPanel} gripProps={gripProps}
               cameraOn={cameraOn} cameraName={camera.devices.find(d => d.id === camera.selectedId)?.name}
               micOn={micOn} micName={mic.devices.find(d => d.id === mic.selectedId)?.name}
               autoZoom={autoZoom} onAutoZoomChange={setAutoZoom}
               smoothCursor={smoothCursor} onSmoothCursorChange={setSmoothCursor}
-              onClose={() => window.close()} disabled={phase === 'starting'} />
+              onClose={() => window.close()} onScreenshot={bridge?.takeScreenshot ? () => bridge.takeScreenshot() : undefined} disabled={phase === 'starting'} />
           </div>
           {/* First-run tips point at the toolbar; they wait while a picker, error or start-up is showing. */}
           <Tips set="toolbar" active={!panel && !error && phase === 'idle'} />
@@ -473,4 +483,5 @@ function App() {
 }
 
 
-createRoot(document.getElementById('root')).render(<App />);
+// The screenshot shortcut opens this same page in its own window with ?screenshot=1.
+createRoot(document.getElementById('root')).render(new URLSearchParams(location.search).has('screenshot') ? <ScreenshotSelect /> : <App />);

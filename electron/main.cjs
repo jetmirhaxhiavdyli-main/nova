@@ -1,4 +1,5 @@
-const { app, BrowserWindow, desktopCapturer, session, ipcMain, dialog, globalShortcut, screen, Menu, systemPreferences, shell } = require('electron');
+const { ClipboardItem } = require('electron');
+const { app, BrowserWindow, desktopCapturer, session, ipcMain, dialog, globalShortcut, screen, Menu, systemPreferences, shell, Tray, nativeImage, clipboard, Notification } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { randomUUID } = require('node:crypto');
@@ -7,6 +8,10 @@ let exportJob = null;
 let editorExport = null;
 const {createEditorExport} = require('./editorExport.cjs');
 let window, selected, recording = false;
+// Nova stays in the tray when its window is closed; `quitting` lets a real quit (tray Quit, update install, logoff) through.
+let quitting = false, tray = null, shotShortcut = null;
+const startHidden = process.argv.includes('--hidden');
+const STOP_SHORTCUT = 'CommandOrControl+Shift+X';
 let overlayInteractive = false;
 let editorMode = false, editorBounds = null;
 let updateActivity={busy:false,unsaved:false};
@@ -34,9 +39,78 @@ const index = path.join(__dirname, '../dist/index.html');
 // Taskbar/window icon when run unpackaged (npm start); packaged builds use the exe's icon (build/icon.png via electron-builder).
 const devIcon = app.isPackaged ? undefined : path.join(__dirname, '../build/icon.png');
 function assertSender(event) { if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('Untrusted request'); }
+function showWindow() { if (!window || window.isDestroyed()) return; if (window.isMinimized()) window.restore(); window.show(); window.focus(); }
 if(app.isPackaged&&!app.requestSingleInstanceLock())app.quit();
 else app.whenReady().then(() => {
-  app.on('second-instance',()=>{if(window&&!window.isDestroyed()){if(window.isMinimized())window.restore();window.focus();}});
+  app.setAppUserModelId('studio.showcase.recorder'); // needed for Windows toast notifications
+  app.on('second-instance',showWindow);
+  const { createSettings, validAccelerator } = require('./settings.cjs');
+  const settings = createSettings({ file: path.join(app.getPath('userData'), 'settings.json'), reserved: [STOP_SHORTCUT] });
+  // Screenshot: the dim appears at once, the display under the cursor is frozen, the user drags an area; it is copied and previewed (Copy / Save).
+  const shotWin = require('./screenshotWindow.cjs').createShotWindow({ BrowserWindow, preload: path.join(__dirname, 'preload.cjs'), icon: devIcon, load: win => win.loadFile(index, { query: { screenshot: '1' } }) });
+  // Electron 44's clipboard takes ClipboardItems (the old writeImage is gone): write the cropped image as PNG.
+  const imageClipboard = { writeImage: image => clipboard.write([new ClipboardItem({ 'image/png': new Blob([image.toPNG()], { type: 'image/png' }) })]) };
+  async function saveScreenshot(png) {
+    const stamp = new Date().toISOString().slice(0, 19).replace('T', ' ').replace(/:/g, '.');
+    const { canceled, filePath } = await dialog.showSaveDialog(shotWin.window, { title: 'Save screenshot', defaultPath: path.join(app.getPath('pictures'), `Nova Screenshot ${stamp}.png`), filters: [{ name: 'PNG image', extensions: ['png'] }] });
+    if (canceled || !filePath) return null;
+    await fs.writeFile(filePath, png);
+    return filePath;
+  }
+  const screenshot = require('./screenshot.cjs').createScreenshot({ desktopCapturer, screen, clipboard: imageClipboard, win: shotWin, save: saveScreenshot,
+    canStart: () => !recording && !exportJob,
+    // Nova's own always-on-top overlay is hidden from the grab (not in editor mode, where the editor is a normal window).
+    prepare: async () => { if (window && !window.isDestroyed() && !editorMode) { window.setContentProtection(true); await new Promise(resolve => setTimeout(resolve, 60)); } },
+    release: () => { if (window && !window.isDestroyed()) window.setContentProtection(recording); },
+    log: message => diagnostics.log.info(message),
+  });
+  const takeScreenshot = () => { screenshot.start().catch(error => diagnostics.log.error('screenshot:', error?.message || error)); };
+  ipcMain.on('screenshot-take', event => { assertSender(event); takeScreenshot(); });
+  const assertShot = event => { if (!screenshot.owns(event.sender)) throw new Error('Untrusted request'); };
+  ipcMain.on('screenshot-mounted', event => { if (screenshot.owns(event.sender)) shotWin.mounted(); });
+  ipcMain.handle('screenshot-done', (event, rect, viewport) => { assertShot(event); return screenshot.finish(rect, viewport); });
+  ipcMain.handle('screenshot-crop', (event, rect) => { assertShot(event); return screenshot.crop(rect ?? null); });
+  ipcMain.handle('screenshot-copy', event => { assertShot(event); return screenshot.copy(); });
+  ipcMain.handle('screenshot-save', event => { assertShot(event); return screenshot.save(); });
+  ipcMain.on('screenshot-cancel', event => { if (screenshot.owns(event.sender)) screenshot.cancel(); });
+  function registerShot(accelerator) {
+    if (shotShortcut === accelerator) return true;
+    let ok = false;
+    try { ok = globalShortcut.register(accelerator, takeScreenshot); } catch { ok = false; }
+    if (!ok) return false;
+    if (shotShortcut) globalShortcut.unregister(shotShortcut);
+    shotShortcut = accelerator;
+    return true;
+  }
+  const applyAutoStart = value => { if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: value, args: ['--hidden'] }); };
+  const publicSettings = () => ({ ...settings.get(), autoStartAvailable: app.isPackaged, shortcutActive: shotShortcut === settings.get().screenshotShortcut });
+  ipcMain.handle('settings-get', event => { assertSender(event); return publicSettings(); });
+  ipcMain.handle('settings-set', (event, patch) => {
+    assertSender(event);
+    const before = settings.get();
+    if (patch?.screenshotShortcut !== undefined && patch.screenshotShortcut !== before.screenshotShortcut) {
+      if (!validAccelerator(patch.screenshotShortcut, [STOP_SHORTCUT])) return { settings: publicSettings(), error: 'That shortcut is not valid. Use at least one modifier (Ctrl, Alt or Shift) and one key.' };
+      if (!registerShot(patch.screenshotShortcut)) return { settings: publicSettings(), error: 'Another app is already using that shortcut. Try a different one.' };
+    }
+    const saved = settings.set(patch);
+    if (patch.startWithWindows !== undefined) applyAutoStart(saved.startWithWindows);
+    refreshTray();
+    return { settings: publicSettings(), error: null };
+  });
+  // Tray: Nova keeps running after its window is closed so the screenshot shortcut stays available.
+  function quitApp() {
+    if (recording || exportJob) { showWindow(); dialog.showMessageBoxSync(window, { type: 'info', message: 'Nova is busy.', detail: 'Stop the recording or wait for the export to finish before quitting.' }); return; }
+    app.quit();
+  }
+  function refreshTray() {
+    if (!tray) return;
+    tray.setContextMenu(Menu.buildFromTemplate([
+      { label: 'Open Nova', click: showWindow },
+      { label: `Take screenshot (${settings.get().screenshotShortcut.replace('CommandOrControl', 'Ctrl').replace('Control', 'Ctrl')})`, click: takeScreenshot },
+      { type: 'separator' },
+      { label: 'Quit Nova', click: quitApp },
+    ]));
+  }
   ipcMain.handle('update-state',event=>{assertSender(event);return updates.getState();});
   ipcMain.handle('update-check',event=>{assertSender(event);return updates.check();});
   ipcMain.handle('update-install',event=>{assertSender(event);return updates.install();});
@@ -201,7 +275,7 @@ else app.whenReady().then(() => {
     }
   });
   Menu.setApplicationMenu(null);
-  window = new BrowserWindow({ ...screen.getPrimaryDisplay().workArea, frame: false, transparent: true, backgroundColor: '#00000000', alwaysOnTop: true, title: 'Nova', icon: devIcon, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
+  window = new BrowserWindow({ ...screen.getPrimaryDisplay().workArea, show: !startHidden, frame: false, transparent: true, backgroundColor: '#00000000', alwaysOnTop: true, title: 'Nova', icon: devIcon, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
   window.setMenu(null);
   // The app is shareable while idle; the recording lifecycle protects its overlay.
   window.setContentProtection(false);
@@ -232,10 +306,22 @@ else app.whenReady().then(() => {
     if (choice === 1) event.preventDefault();
   });
   window.webContents.on('will-navigate', event => event.preventDefault());
-  window.on('close', event => { if (exportJob) { event.preventDefault(); return; } if (recording) { event.preventDefault(); window.webContents.send('stop'); } });
+  // Closing the window hides Nova to the tray (so the screenshot shortcut keeps working); a real quit passes through.
+  window.on('close', event => {
+    if (exportJob) { event.preventDefault(); return; }
+    if (recording) { event.preventDefault(); window.webContents.send('stop'); return; }
+    if (!quitting && tray) { event.preventDefault(); window.hide(); }
+  });
+  window.on('session-end', () => { quitting = true; });
   window.loadFile(index);
-  window.webContents.once('did-finish-load',()=>{void updates.start();});
-  globalShortcut.register('CommandOrControl+Shift+X', () => { if (recording) window.webContents.send('stop'); });
+  window.webContents.once('did-finish-load',()=>{void updates.start();setTimeout(()=>shotWin.warm(),1500);});
+  globalShortcut.register(STOP_SHORTCUT, () => { if (recording) window.webContents.send('stop'); });
+  if (!registerShot(settings.get().screenshotShortcut)) diagnostics.log.warn(`screenshot shortcut ${settings.get().screenshotShortcut} is in use by another app`);
+  applyAutoStart(settings.get().startWithWindows);
+  try { tray = new Tray(nativeImage.createFromPath(path.join(__dirname, '../build/icon.png')).resize({ width: 32, height: 32 })); tray.setToolTip('Nova'); tray.on('click', showWindow); refreshTray(); }
+  catch (error) { diagnostics.log.warn('tray unavailable:', error?.message || error); }
 });
-app.on('window-all-closed', () => app.quit());
+// The tray keeps Nova alive after its window closes; quitting is explicit.
+app.on('window-all-closed', () => { if (!tray) app.quit(); });
+app.on('before-quit', () => { quitting = true; });
 app.on('will-quit', () => { recordingMetrics.stop();nativeCapture.stop();clicks.stop();globalShortcut.unregisterAll(); });

@@ -60,7 +60,7 @@ export default function RecordToolbar({
   micOn, micName,
   autoZoom, onAutoZoomChange,
   smoothCursor, onSmoothCursorChange,
-  onClose, disabled,
+  onClose, onScreenshot, disabled,
 }) {
   const toggle = id => onPanelChange(activePanel === id ? null : id);
   return (
@@ -97,6 +97,17 @@ export default function RecordToolbar({
       <ToggleButton variant="ghost" size="lg" isIconOnly className="toolbar__toggle" aria-label="Recent recordings" isSelected={activePanel === 'recents'} onChange={() => toggle('recents')} isDisabled={disabled}>
         <Icon name="list" size={16} />
       </ToggleButton>
+      {onScreenshot && (
+        <Tooltip delay={300} closeDelay={0}>
+          <Button variant="ghost" size="lg" isIconOnly className="toolbar__toggle" aria-label="Take a screenshot" isDisabled={disabled} onPress={onScreenshot}>
+            <Icon name="screenshot" size={16} />
+          </Button>
+          <Tooltip.Content className="toolbar-tip" placement="top" offset={10}>
+            <strong>Screenshot</strong>
+            <span>Copy an area of your screen</span>
+          </Tooltip.Content>
+        </Tooltip>
+      )}
       <UpdateBell isDisabled={disabled} />
       {window.recorder && <Button isIconOnly variant="ghost" size="sm" aria-label="Minimize Nova" onPress={() => window.recorder.minimizeWindow()}><span aria-hidden="true">−</span></Button>}
       <Button isIconOnly className="toolbar__close" aria-label="Close Nova" onPress={window.recorder ? () => window.recorder.closeWindow() : onClose}>

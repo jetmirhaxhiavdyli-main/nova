@@ -1,6 +1,6 @@
-## Nova 1.1.0
+## Nova 1.2.0
 
-- New: custom export size. Choose "Custom size…" in the export dialog and enter any width and height. The video is fitted inside and centered with black bars, and the file comes out at exactly that size.
-- New: custom output size in the editor. "Custom size…" in the Output size menu sets the canvas to any size from 64 to 4096 px, and your background fills the space around the recording.
-- New: custom recording area. Type an exact width and height for the area you record, in addition to dragging the outline.
-- Improved: MP4 exports look sharper at the same or a smaller file size. They take a bit longer to export.
+- New: screenshots. Press a shortcut anywhere (default Ctrl+Shift+5, change it in About) or the new toolbar button, drag an area, and it is copied to your clipboard. A quick preview lets you crop, copy again or save it as a PNG.
+- New: Nova keeps running in the tray when you close its window, so the shortcut is always ready. You can also have it start with Windows.
+- New: lock the aspect ratio when you size a recording area. Type a width or height and the other follows, and dragging a corner keeps the shape.
+- New: an animated glow behind the toolbar, and a red-orange one while you record.

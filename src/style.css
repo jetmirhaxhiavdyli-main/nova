@@ -44,7 +44,32 @@ body { margin: 0; background: transparent; color: var(--foreground); -webkit-fon
 .stage { position: relative; height: 100%; overflow: hidden; }
 .stage[data-preview] { background: #56606c; } /* browser preview only: stands in for the desktop */
 .dock { position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.dock__bar { display: flex; flex-direction: column; align-items: stretch; }
+.dock__bar { position: relative; display: flex; flex-direction: column; align-items: stretch; }
+/* Animated blurred glow behind the toolbar so it stays visible on any desktop. Three blobs drift slowly (transform only, so it stays on the GPU). */
+/* z-index -1: behind the pickers and the toolbar (the dock is its own stacking context), never over them. */
+.toolbar-glow { position: absolute; inset: -170px -170px -36px; z-index: -1; pointer-events: none; opacity: 1; }
+.toolbar-glow span { position: absolute; will-change: transform; }
+.toolbar-glow span:nth-child(1) { left: -10%; top: 4%; width: 68%; height: 100%; background: radial-gradient(closest-side, rgba(45, 170, 185, 1.000) 0%, rgba(45, 170, 185, 0.993) 5%, rgba(45, 170, 185, 0.972) 10%, rgba(45, 170, 185, 0.939) 15%, rgba(45, 170, 185, 0.896) 20%, rgba(45, 170, 185, 0.844) 25%, rgba(45, 170, 185, 0.784) 30%, rgba(45, 170, 185, 0.718) 35%, rgba(45, 170, 185, 0.648) 40%, rgba(45, 170, 185, 0.575) 45%, rgba(45, 170, 185, 0.500) 50%, rgba(45, 170, 185, 0.425) 55%, rgba(45, 170, 185, 0.352) 60%, rgba(45, 170, 185, 0.282) 65%, rgba(45, 170, 185, 0.216) 70%, rgba(45, 170, 185, 0.156) 75%, rgba(45, 170, 185, 0.104) 80%, rgba(45, 170, 185, 0.061) 85%, rgba(45, 170, 185, 0.028) 90%, rgba(45, 170, 185, 0.007) 95%, rgba(45, 170, 185, 0.000) 100%); animation: glow-a 5s ease-in-out infinite alternate; }
+.toolbar-glow span:nth-child(2) { left: 18%; top: -26%; width: 70%; height: 128%; background: radial-gradient(closest-side, rgba(34, 205, 115, 1.000) 0%, rgba(34, 205, 115, 0.993) 5%, rgba(34, 205, 115, 0.972) 10%, rgba(34, 205, 115, 0.939) 15%, rgba(34, 205, 115, 0.896) 20%, rgba(34, 205, 115, 0.844) 25%, rgba(34, 205, 115, 0.784) 30%, rgba(34, 205, 115, 0.718) 35%, rgba(34, 205, 115, 0.648) 40%, rgba(34, 205, 115, 0.575) 45%, rgba(34, 205, 115, 0.500) 50%, rgba(34, 205, 115, 0.425) 55%, rgba(34, 205, 115, 0.352) 60%, rgba(34, 205, 115, 0.282) 65%, rgba(34, 205, 115, 0.216) 70%, rgba(34, 205, 115, 0.156) 75%, rgba(34, 205, 115, 0.104) 80%, rgba(34, 205, 115, 0.061) 85%, rgba(34, 205, 115, 0.028) 90%, rgba(34, 205, 115, 0.007) 95%, rgba(34, 205, 115, 0.000) 100%); animation: glow-b 6.5s ease-in-out infinite alternate; }
+.toolbar-glow span:nth-child(3) { right: -10%; top: 8%; width: 62%; height: 96%; background: radial-gradient(closest-side, rgba(56, 110, 255, 0.900) 0%, rgba(56, 110, 255, 0.893) 5%, rgba(56, 110, 255, 0.875) 10%, rgba(56, 110, 255, 0.845) 15%, rgba(56, 110, 255, 0.806) 20%, rgba(56, 110, 255, 0.759) 25%, rgba(56, 110, 255, 0.706) 30%, rgba(56, 110, 255, 0.646) 35%, rgba(56, 110, 255, 0.583) 40%, rgba(56, 110, 255, 0.517) 45%, rgba(56, 110, 255, 0.450) 50%, rgba(56, 110, 255, 0.383) 55%, rgba(56, 110, 255, 0.317) 60%, rgba(56, 110, 255, 0.254) 65%, rgba(56, 110, 255, 0.194) 70%, rgba(56, 110, 255, 0.141) 75%, rgba(56, 110, 255, 0.094) 80%, rgba(56, 110, 255, 0.055) 85%, rgba(56, 110, 255, 0.025) 90%, rgba(56, 110, 255, 0.007) 95%, rgba(56, 110, 255, 0.000) 100%); animation: glow-c 4.5s ease-in-out infinite alternate; }
+:root.light .toolbar-glow { opacity: 0.6; }
+/* While recording: a red-orange glow behind the recording bar (the overlay is excluded from the capture, so it never appears in the video). It calms down when paused. */
+.toolbar-glow--rec { inset: -100px -70px -34px; transition: opacity 0.4s; }
+.toolbar-glow--rec span:nth-child(1) { left: -6%; top: 14%; width: 62%; height: 86%; }
+.toolbar-glow--rec span:nth-child(2) { left: 20%; top: -18%; width: 60%; height: 116%; }
+.toolbar-glow--rec span:nth-child(3) { right: -6%; top: 14%; width: 58%; height: 86%; }
+.toolbar-glow--rec span:nth-child(1) { animation-duration: 3.2s; } /* a livelier pulse while recording */
+.toolbar-glow--rec span:nth-child(2) { animation-duration: 4.2s; }
+.toolbar-glow--rec span:nth-child(3) { animation-duration: 2.8s; }
+.toolbar-glow--rec span:nth-child(1) { background: radial-gradient(closest-side, rgba(255, 120, 40, 1.000) 0%, rgba(255, 120, 40, 0.993) 5%, rgba(255, 120, 40, 0.972) 10%, rgba(255, 120, 40, 0.939) 15%, rgba(255, 120, 40, 0.896) 20%, rgba(255, 120, 40, 0.844) 25%, rgba(255, 120, 40, 0.784) 30%, rgba(255, 120, 40, 0.718) 35%, rgba(255, 120, 40, 0.648) 40%, rgba(255, 120, 40, 0.575) 45%, rgba(255, 120, 40, 0.500) 50%, rgba(255, 120, 40, 0.425) 55%, rgba(255, 120, 40, 0.352) 60%, rgba(255, 120, 40, 0.282) 65%, rgba(255, 120, 40, 0.216) 70%, rgba(255, 120, 40, 0.156) 75%, rgba(255, 120, 40, 0.104) 80%, rgba(255, 120, 40, 0.061) 85%, rgba(255, 120, 40, 0.028) 90%, rgba(255, 120, 40, 0.007) 95%, rgba(255, 120, 40, 0.000) 100%); }
+.toolbar-glow--rec span:nth-child(2) { background: radial-gradient(closest-side, rgba(255, 70, 50, 1.000) 0%, rgba(255, 70, 50, 0.993) 5%, rgba(255, 70, 50, 0.972) 10%, rgba(255, 70, 50, 0.939) 15%, rgba(255, 70, 50, 0.896) 20%, rgba(255, 70, 50, 0.844) 25%, rgba(255, 70, 50, 0.784) 30%, rgba(255, 70, 50, 0.718) 35%, rgba(255, 70, 50, 0.648) 40%, rgba(255, 70, 50, 0.575) 45%, rgba(255, 70, 50, 0.500) 50%, rgba(255, 70, 50, 0.425) 55%, rgba(255, 70, 50, 0.352) 60%, rgba(255, 70, 50, 0.282) 65%, rgba(255, 70, 50, 0.216) 70%, rgba(255, 70, 50, 0.156) 75%, rgba(255, 70, 50, 0.104) 80%, rgba(255, 70, 50, 0.061) 85%, rgba(255, 70, 50, 0.028) 90%, rgba(255, 70, 50, 0.007) 95%, rgba(255, 70, 50, 0.000) 100%); }
+.toolbar-glow--rec span:nth-child(3) { background: radial-gradient(closest-side, rgba(255, 160, 50, 0.950) 0%, rgba(255, 160, 50, 0.943) 5%, rgba(255, 160, 50, 0.923) 10%, rgba(255, 160, 50, 0.892) 15%, rgba(255, 160, 50, 0.851) 20%, rgba(255, 160, 50, 0.802) 25%, rgba(255, 160, 50, 0.745) 30%, rgba(255, 160, 50, 0.682) 35%, rgba(255, 160, 50, 0.616) 40%, rgba(255, 160, 50, 0.546) 45%, rgba(255, 160, 50, 0.475) 50%, rgba(255, 160, 50, 0.404) 55%, rgba(255, 160, 50, 0.334) 60%, rgba(255, 160, 50, 0.268) 65%, rgba(255, 160, 50, 0.205) 70%, rgba(255, 160, 50, 0.148) 75%, rgba(255, 160, 50, 0.099) 80%, rgba(255, 160, 50, 0.058) 85%, rgba(255, 160, 50, 0.027) 90%, rgba(255, 160, 50, 0.007) 95%, rgba(255, 160, 50, 0.000) 100%); }
+.toolbar-glow--rec[data-paused] { opacity: 0.45; }
+.toolbar-glow--rec[data-paused] span { animation-play-state: paused; }
+@keyframes glow-a { from { transform: translate3d(-12%, 10%, 0) scale(0.95); } to { transform: translate3d(30%, -16%, 0) scale(1.25); } }
+@keyframes glow-b { from { transform: translate3d(22%, 6%, 0) scale(1.15); } to { transform: translate3d(-30%, -8%, 0) scale(0.85); } }
+@keyframes glow-c { from { transform: translate3d(12%, -10%, 0) scale(0.9); } to { transform: translate3d(-34%, 12%, 0) scale(1.22); } }
+@media (prefers-reduced-motion: reduce) { .toolbar-glow span { animation: none; } }
 
 /* Brand: the logo (src/assets/brand/nova-logo.png) and app icon (nova-icon.png) are full-colour images, not tinted icons. */
 .icon-image { display: inline-block; flex-shrink: 0; object-fit: contain; user-select: none; }
@@ -234,6 +259,10 @@ body { margin: 0; background: transparent; color: var(--foreground); -webkit-fon
 /* ---------- Area selection (Figma: Area selection) ---------- */
 .area { position: absolute; box-sizing: border-box; border: 1.5px dashed var(--accent); border-radius: 4px; background: var(--accent-soft); cursor: move; touch-action: none; }
 .area__handle { position: absolute; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); box-shadow: 0 0 0 1.5px #fff; }
+.area__handle { transition: transform 0.12s var(--ease-fluid, ease-out); }
+.area__handle::before { content: ""; position: absolute; inset: -8px; } /* larger hit area than the visible square */
+.area__handle:hover { transform: scale(1.5); }
+.area__handle:active { transform: scale(1.8); } /* stays enlarged while dragging (the pointer is captured) */
 .area__handle--top-left { left: -6.5px; top: -6.5px; cursor: nwse-resize; }
 .area__handle--top-right { right: -6.5px; top: -6.5px; cursor: nesw-resize; }
 .area__handle--bottom-left { left: -6.5px; bottom: -6.5px; cursor: nesw-resize; }
@@ -602,3 +631,30 @@ body { margin: 0; background: transparent; color: var(--foreground); -webkit-fon
 .timeline__playhead span:last-child { position: absolute; left: 0; top: 4px; bottom: 0; width: 2px; border-radius: 1px; background: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* Screenshot selection window (?screenshot=1) */
+.shot { position: fixed; inset: 0; overflow: hidden; cursor: crosshair; user-select: none; }
+.shot img { display: block; width: 100%; height: 100%; pointer-events: none; }
+.shot__dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); pointer-events: none; }
+.shot__sel { position: absolute; outline: 1px solid #fff; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45); pointer-events: none; }
+.shot__size, .shot__hint { position: absolute; padding: 2px 8px; border-radius: 16px; background: var(--accent); color: var(--accent-foreground); font-size: 12px; line-height: 17px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+.shot__hint { left: 50%; top: 24px; transform: translateX(-50%); }
+.about__shortcut { min-width: 140px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--hairline); background: var(--default); color: inherit; font: inherit; font-size: 13px; text-align: center; cursor: pointer; }
+.about__shortcut[data-recording] { border-color: var(--accent); }
+.about__note { margin: -6px 0 12px; font-size: 12px; line-height: 16px; color: var(--muted); }
+
+/* Screenshot preview card */
+.snap { position: fixed; inset: 12px; display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: var(--radius-panel); background: var(--background); border: 1px solid var(--hairline); box-shadow: var(--shadow-panel); color: var(--foreground); }
+.snap__bar { display: flex; align-items: center; gap: 8px; }
+.snap__bar--top { -webkit-app-region: drag; font-size: 14px; }
+.snap__bar--top button { -webkit-app-region: no-drag; }
+.snap__size { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.snap__close { margin-left: auto; }
+.snap__image { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--default); overflow: hidden; }
+.snap__image img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.snap__status { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; }
+.snap .snap__copy[data-copied] { background: var(--success, #22c55e); color: #fff; }
+.snap__crop { position: absolute; }
+.snap__cropclip { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.snap__cropdim { position: absolute; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.55); }
+.panel .editor-switch { margin: 6px 4px 2px; }

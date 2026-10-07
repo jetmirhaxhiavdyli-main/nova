@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {Button,Modal} from '@heroui/react';
 import Icon from './components/Icon';
-import {Segmented} from './components/editor/panels/PanelShell';
+import {Segmented,SwitchField} from './components/editor/panels/PanelShell';
 import {THEMES,useTheme} from './theme';
 import {resetTips} from './components/Tips';
 
@@ -12,6 +12,40 @@ function ThemeSwitch(){
   return <>
     <div className="about__theme"><span className="about__theme-label">Appearance</span><Segmented label="Appearance" value={theme} options={THEMES} onChange={setTheme}/></div>
     <div className="about__theme"><span className="about__theme-label">Tips</span><Button size="sm" variant="secondary" isDisabled={reset} onPress={()=>{resetTips();setReset(true);}}>{reset?'Tips will show again':'Show tips again'}</Button></div>
+  </>;
+}
+
+const KEYS={Space:'Space',Enter:'Enter',Tab:'Tab',Backspace:'Backspace',Delete:'Delete',Insert:'Insert',Home:'Home',End:'End',PageUp:'PageUp',PageDown:'PageDown',ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',ArrowRight:'Right',Minus:'-',Equal:'=',Comma:',',Period:'.',Slash:'/',Semicolon:';',Quote:"'",Backquote:'`',BracketLeft:'[',BracketRight:']',Backslash:'\\'};
+/** Key press -> Electron accelerator ("Control+Shift+5"); null for a bare/modifier-only press (global shortcuts need a modifier). */
+function accelerator(e){
+  const c=e.code,key=/^Key[A-Z]$/.test(c)?c.slice(3):/^Digit\d$/.test(c)?c.slice(5):/^F([1-9]|1\d|2[0-4])$/.test(c)?c:KEYS[c];
+  const mods=[e.ctrlKey&&'Control',e.altKey&&'Alt',e.shiftKey&&'Shift',e.metaKey&&'Super'].filter(Boolean);
+  return key&&mods.length?[...mods,key].join('+'):null;
+}
+const show=a=>a.replace('CommandOrControl','Ctrl').replace('Control','Ctrl');
+
+/** Screenshot shortcut + start-with-Windows (settings live in the main process: electron/settings.cjs). */
+function ScreenshotSettings(){
+  const bridge=window.recorder;
+  const [settings,setSettings]=useState(null),[capturing,setCapturing]=useState(false),[error,setError]=useState('');
+  useEffect(()=>{bridge?.getSettings?.().then(setSettings).catch(()=>{});},[bridge]);
+  if(!settings)return null;
+  const save=async patch=>{setError('');try{const r=await bridge.setSettings(patch);setSettings(r.settings);setError(r.error||'');}catch{setError('Could not save the setting.');}};
+  const key=e=>{
+    e.preventDefault();e.stopPropagation();
+    if(e.key==='Escape'){setCapturing(false);return;}
+    const a=accelerator(e);
+    if(a){setCapturing(false);save({screenshotShortcut:a});}
+  };
+  return <>
+    <div className="about__theme"><span className="about__theme-label">Screenshot shortcut</span>
+      <button type="button" className="about__shortcut" data-recording={capturing||undefined} onClick={()=>{setError('');setCapturing(true);}} onBlur={()=>setCapturing(false)} onKeyDown={capturing?key:undefined}>
+        {capturing?'Press a shortcut…':show(settings.screenshotShortcut)}
+      </button></div>
+    <p className="about__note">Press it anywhere to copy a screenshot of an area. Closing Nova keeps it in the tray so the shortcut keeps working.</p>
+    {!settings.shortcutActive&&!error&&<p role="alert" className="about__note">Another app is using this shortcut, so it isn’t active. Choose a different one (the toolbar button still works).</p>}
+    {error&&<p role="alert" className="about__note">{error}</p>}
+    {settings.autoStartAvailable&&<SwitchField label="Start with Windows" description="Starts hidden in the tray." isSelected={settings.startWithWindows} onChange={v=>save({startWithWindows:v})}/>}
   </>;
 }
 
@@ -60,6 +94,7 @@ export default function UpdateAbout({busy,unsaved}){
           <p className="about__blurb">This is a passion project of mine that I decided to see what people make of it.</p>
           <p className="about__blurb about__credit">Created by: Jetmir Haxhiavdyli - justmila.design</p>
           <ThemeSwitch/>
+          <ScreenshotSettings/>
           {ready&&<h3>Nova {state.version} is ready</h3>}
           <p role="status">{labels[state.status]} {state.status==='downloading'?`${Math.round(state.percent)}%`:''}</p>
           {state.status==='downloading'&&<progress aria-label="Update download progress" value={state.percent} max={100}/>}

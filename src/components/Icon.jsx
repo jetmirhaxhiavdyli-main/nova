@@ -38,6 +38,7 @@ import folderCheck from '../assets/icons/folder-check.svg';
 import folderPlus from '../assets/icons/folder-plus.svg';
 import cursorSmooth from '../assets/icons/cursor-smooth.svg';
 import bell from '../assets/icons/bell.svg';
+import screenshot from '../assets/icons/screenshot.svg';
 import brandLogo from '../assets/brand/nova-logo.png';
 import appIcon from '../assets/brand/nova-icon.png';
 import appIconLight from '../assets/brand/nova-icon-light.png';
@@ -45,7 +46,7 @@ import appIconLight from '../assets/brand/nova-icon-light.png';
 // Full-colour brand images, drawn as-is (not tinted like the icons below).
 const IMAGES = { brand: brandLogo, 'app-icon': appIcon, 'app-icon-light': appIconLight };
 
-const ICONS = { area, bell, camera, 'camera-off': cameraOff, check, close, display, grip, list, mic, 'mic-off': micOff, pause, play, restart, stop, trash, wave, window: windowIcon,
+const ICONS = { area, bell, screenshot, camera, 'camera-off': cameraOff, check, close, display, grip, list, mic, 'mic-off': micOff, pause, play, restart, stop, trash, wave, window: windowIcon,
   'trash-bin': trashBin, scissors, folder, 'arrow-down-to-line': arrowDownToLine, 'play-outline': playOutline,
   'chevron-left': chevronLeft, 'chevron-down': chevronDown, undo, redo, 'floppy-disk': floppyDisk, crop, video, picture, volume, 'zoom-in': zoomIn,
   music, plus, 'folder-check': folderCheck, 'folder-plus': folderPlus, 'cursor-smooth': cursorSmooth };

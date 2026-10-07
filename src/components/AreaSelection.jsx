@@ -7,7 +7,7 @@ const MIN = 120;
  * Move by dragging inside, resize from the corners. `ratio` locks the aspect ratio when set.
  * `rect` is in CSS pixels of this window; the capture code converts it to screen pixels.
  */
-export default function AreaSelection({ rect, onChange, ratio, scale = 1 }) {
+export default function AreaSelection({ rect, onChange, ratio, scale = 1, min = MIN }) {
   const start = useRef(null);
 
   function begin(event, handle) {
@@ -23,7 +23,7 @@ export default function AreaSelection({ rect, onChange, ratio, scale = 1 }) {
     else {
       if (s.handle.includes('left')) { x += dx; width -= dx; } else width += dx;
       if (s.handle.includes('top')) { y += dy; height -= dy; } else height += dy;
-      width = Math.max(MIN, width); height = Math.max(MIN, height);
+      width = Math.max(min, width); height = Math.max(min, height);
       if (ratio) {
         height = width / ratio;
         if (s.handle.includes('top')) y = s.rect.y + s.rect.height - height;
