@@ -42,7 +42,8 @@ function assertSender(event) { if (!window || event.sender !== window.webContent
 function showWindow() { if (!window || window.isDestroyed()) return; if (window.isMinimized()) window.restore(); window.show(); window.focus(); }
 if(app.isPackaged&&!app.requestSingleInstanceLock())app.quit();
 else app.whenReady().then(() => {
-  app.setAppUserModelId('studio.showcase.recorder'); // needed for Windows toast notifications
+  // Installed builds only: a dev run with the same ID makes Windows create an "Electron" Start shortcut that hijacks the real Nova shortcut.
+  if (app.isPackaged) app.setAppUserModelId('studio.showcase.recorder');
   app.on('second-instance',showWindow);
   const { createSettings, validAccelerator } = require('./settings.cjs');
   const settings = createSettings({ file: path.join(app.getPath('userData'), 'settings.json'), reserved: [STOP_SHORTCUT] });
