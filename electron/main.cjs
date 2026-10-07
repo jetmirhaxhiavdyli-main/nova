@@ -339,7 +339,7 @@ else app.whenReady().then(() => {
   });
   window.on('session-end', () => { quitting = true; });
   window.loadFile(index);
-  window.webContents.once('did-finish-load',()=>{void updates.start();setTimeout(()=>shotWin.warm(),1500);});
+  window.webContents.once('did-finish-load',()=>{void updates.start();setInterval(()=>void updates.start(),60*60*1000).unref();setTimeout(()=>shotWin.warm(),1500);});
   globalShortcut.register(STOP_SHORTCUT, () => { if (recording) window.webContents.send('stop'); });
   if (!registerShot(settings.get().screenshotShortcut)) diagnostics.log.warn(`screenshot shortcut ${settings.get().screenshotShortcut} is in use by another app`);
   applyAutoStart(settings.get().startWithWindows);
