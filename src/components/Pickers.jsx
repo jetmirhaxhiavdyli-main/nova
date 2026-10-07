@@ -101,7 +101,25 @@ export const AREA_PRESETS = [
   { id: '4:3', name: 'Standard 4:3', meta: '1440 × 1080', glyph: [32, 24], ratio: 4 / 3 },
 ];
 
-export function AreaPicker({ presetId, customSize, onSelect, onRecord, busy }) {
+/** Exact area size in screen pixels; commits on blur/Enter, clamped to 120px..screen. */
+function SizeFields({ size, max, onSize }) {
+  const commit = (key, raw) => {
+    const v = Math.min(max[key], Math.max(120, Math.round(Number(raw) || 0)));
+    if (v !== size[key]) onSize({ ...size, [key]: v });
+  };
+  return (
+    <div className="area-size">
+      {['width', 'height'].map(key => (
+        <label key={key}>{key === 'width' ? 'W' : 'H'}
+          <input type="number" min={120} max={max[key]} defaultValue={size[key]} key={`${key}-${size[key]}`} aria-label={`Area ${key} in pixels`}
+            onBlur={e => commit(key, e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} />
+        </label>
+      ))}
+    </div>
+  );
+}
+
+export function AreaPicker({ presetId, customSize, onSelect, onSize, max, onRecord, busy }) {
   return (
     <Panel title="Choose an area" meta="Drag on screen to adjust"
       footer={<Footer hint="Custom recording area" action="Record area" onAction={onRecord} isDisabled={busy} />}>
@@ -113,6 +131,7 @@ export function AreaPicker({ presetId, customSize, onSelect, onRecord, busy }) {
             onSelect={() => onSelect(p.id)} onActivate={onRecord} />
         ))}
       </div>
+      <SizeFields size={customSize} max={max} onSize={onSize} />
     </Panel>
   );
 }

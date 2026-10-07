@@ -390,7 +390,7 @@ function App() {
       setPanel(null);setError('');setSaved('');setExportOpen(false);setPhase('review');setEditorOpen(true);
     } catch(e) {setError('Could not open recording: '+e.message);}
   }
-  async function runExport({ format, fps, quality, resolution = 'original', fileName = '', folder = null }) {
+  async function runExport({ format, fps, quality, resolution = 'original', customSize, fileName = '', folder = null }) {
     const destination = 'file';
     if (!bridge || !blob.current) { setExportNote('Record a clip in the desktop app first.'); return; }
     if (exportBusy.current) return;
@@ -403,11 +403,11 @@ function App() {
         editorExportAbort.current = new AbortController();
         const input=editorEdits.current||editorAsset.current?.deferredEffects?editorRecording:{...editorRecording,url,cursorFree:false,events:[],clicks:[],zooms:[]};
         const edits=editorEdits.current || reviewEdits(input);
-        result = await exportEditor(input, structuredClone(edits), { destination, format, fps, quality, resolution, fileName, folder }, bridge, editorExportAbort.current.signal, percent => setExportProgress({ label: 'Rendering…', percent }));
+        result = await exportEditor(input, structuredClone(edits), { destination, format, fps, quality, resolution, customSize, fileName, folder }, bridge, editorExportAbort.current.signal, percent => setExportProgress({ label: 'Rendering…', percent }));
       } else {
         const bytes = new Uint8Array(await blob.current.arrayBuffer());
         if (exportCancelled.current) { setExportNote('Export cancelled. Your recording is still available.'); return; }
-        result = await bridge.export(bytes, { destination, format, fps, quality, resolution, fileName, folder, duration: clipDuration.current });
+        result = await bridge.export(bytes, { destination, format, fps, quality, resolution, customSize, fileName, folder, duration: clipDuration.current });
       }
       if (result.canceled) setExportNote('Export cancelled. Your recording is still available.');
       else { succeeded = true; setExportedPath(result.filePath); setPhase('review'); setExportNote(`Saved as ${result.filePath.split(/[\\/]/).pop()}`); }
@@ -448,6 +448,8 @@ function App() {
           {panel === 'window' && <WindowPicker windows={windows} selectedId={windowId} onSelect={setWindowId} onRecord={() => start(windowId)} busy={busy || loading} />}
           {panel === 'area' && <AreaPicker presetId={areaPreset} customSize={{ width: Math.round(area.width * (window.devicePixelRatio || 1)), height: Math.round(area.height * (window.devicePixelRatio || 1)) }}
             onSelect={id => { setAreaPreset(id); const p = AREA_PRESETS.find(x => x.id === id); if (p?.ratio) setArea(a => ({ ...a, height: Math.round(a.width / p.ratio) })); }}
+            onSize={({ width, height }) => { const s = window.devicePixelRatio || 1; setAreaPreset('custom'); setArea(a => ({ ...a, width: Math.round(width / s), height: Math.round(height / s) })); }}
+            max={{ width: Math.round(window.innerWidth * (window.devicePixelRatio || 1)), height: Math.round(window.innerHeight * (window.devicePixelRatio || 1)) }}
             onRecord={recordArea} busy={busy} />}
           {panel === 'recents' && <RecentRecordings recordings={recents} folders={folders} {...folderActions} onOpen={reopenProject}
             onRename={bridge ? renameProject : async (item, name) => setRecents(list => list.map(r => r.id === item.id ? { ...r, name } : r))}

@@ -13,7 +13,8 @@ const PRESETS = {
 };
 function validate(options) {
   if (!options || options.destination !== 'file' || !['MP4', 'GIF', 'WebM'].includes(options.format) || !(options.format==='GIF'?[10,15,20,24,30,50,60]:[24,30,50,60]).includes(options.fps) || !Object.hasOwn(PRESETS, options.quality)) throw new Error('Invalid export settings.');
-  if(!['original','1080p','720p',...(options.format==='GIF'?['480p']:[])].includes(options.resolution??'original')) throw new Error('Invalid export resolution.');
+  if(!['original','1080p','720p','custom',...(options.format==='GIF'?['480p']:[])].includes(options.resolution??'original')) throw new Error('Invalid export resolution.');
+  if(options.resolution==='custom'&&![options.customSize?.width,options.customSize?.height].every(n=>Number.isInteger(n)&&n>=16&&n<=8192)) throw new Error('Invalid custom export size.');
   return options;
 }
 function run(binary, args, { signal, onData } = {}) {
@@ -46,7 +47,8 @@ async function probe(file, signal) {
 function codecArgs(options,width,height) {
   const preset=PRESETS[options.quality],pix=width%2||height%2?'yuv444p':'yuv420p',gop=String((options.fps||30)*10);
   return options.format==='MP4'
-    ? ['-c:v','libx264','-preset','slow','-crf',String(preset.h264),'-g',gop,'-profile:v','high','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart']
+    // Benchmarked on a screen-style clip: `slower` + `-tune animation` at CRF+1 is smaller and measurably sharper than `slow` at the old CRF.
+    ? ['-c:v','libx264','-preset','slower','-tune','animation','-crf',String(preset.h264+1),'-g',gop,'-profile:v','high','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart']
     : ['-c:v','libvpx-vp9','-deadline','good','-cpu-used','2','-row-mt','1','-tile-columns','2','-tune-content','screen','-crf',String(preset.vp9),'-b:v','0','-g',gop,'-pix_fmt',pix,'-c:a','libopus','-b:a','128k'];
 }
 // Editor frames are RGB: convert to BT.709 with accurate chroma (sharper coloured text) and tag it so players don't shift colours.

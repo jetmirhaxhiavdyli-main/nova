@@ -1,4 +1,4 @@
-import { IMAGE_FILL, OUTPUT_SIZES, animatedBackground, animatedBackgroundFrame, backgroundKind, blurredImageRect, imageBlurPx, imageRect, imageSrc, presetGradient } from './components/editor/constants.js';
+import { IMAGE_FILL, outputDims, animatedBackground, animatedBackgroundFrame, backgroundKind, blurredImageRect, imageBlurPx, imageRect, imageSrc, presetGradient } from './components/editor/constants.js';
 import { editorCamera, editorCursor } from './editorMotion.mjs';
 import { prepareTrimmedExport } from './trimExport.mjs';
 import { cutPlan, mapClicks } from './cutExport.mjs';
@@ -17,8 +17,7 @@ export function paintCamera(c,source,width,height,settings) {
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function compositionLayout(source, edits) {
-  const preset=OUTPUT_SIZES.find(p=>p.id===edits.output.size);
-  const width=preset?.width || source.width,height=preset?.height || source.height;
+  const {width,height}=outputDims(edits.output,source);
   const pad=edits.background.mode==='none'?0:width*edits.background.padding/100;
   const vw=Math.min(Math.max(0,width-pad*2),Math.max(0,height-pad*2)*source.width/source.height),vh=vw*source.height/source.width;
   const maxX=(width-vw)/2,maxY=(height-vh)/2;

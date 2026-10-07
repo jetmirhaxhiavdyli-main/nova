@@ -16,7 +16,9 @@ const RESOLUTIONS = [
   { id: '1080p', name: 'Fit within 1920 × 1080', w: 1920, h: 1080 },
   { id: '720p', name: 'Fit within 1280 × 720', w: 1280, h: 720 },
   { id: '480p', name: 'Fit within 640 × 480 — GIF only', w: 640, h: 480, gifOnly: true },
+  { id: 'custom', name: 'Custom size…' },
 ];
+const clampDim = v => Math.min(8192, Math.max(16, Math.round(Number(v) || 0)));
 /** Actual output size for a composition at a resolution. MP4 rounds to even dimensions (H.264 4:2:0). */
 import { outputSize } from '../../electron/exportGeometry.mjs';
 export { outputSize };
@@ -87,6 +89,7 @@ export default function ExportModal({ isOpen, onOpenChange, onExport, onCancel, 
   }
   const [format, setFormatState] = useState(PRESETS[0].format);
   const [resolution, setResolution] = useState(PRESETS[0].resolution);
+  const [customW, setCustomW] = useState('1920'), [customH, setCustomH] = useState('1080');
   const [fps, setFps] = useState(PRESETS[0].fps);
   const [quality, setQuality] = useState(PRESETS[0].quality);
   const isGif = format === 'GIF';
@@ -107,10 +110,11 @@ export default function ExportModal({ isOpen, onOpenChange, onExport, onCancel, 
   }
   const rates = isGif ? GIF_FRAME_RATES : FRAME_RATES;
   const resolutions = RESOLUTIONS.filter(r => isGif || !r.gifOnly);
-  const out = outputSize(size, resolution, format);
+  const custom = { width: clampDim(customW), height: clampDim(customH) };
+  const out = outputSize(size, resolution, format, custom);
   const dims = out ? `${out.width} × ${out.height}` : null;
   function runExport() {
-    onExport({ destination: 'file', format, fps: Number(fps), quality, resolution, fileName: fileName.trim(), folder: folder?.path || null });
+    onExport({ destination: 'file', format, fps: Number(fps), quality, resolution, customSize: resolution === 'custom' ? custom : undefined, fileName: fileName.trim(), folder: folder?.path || null });
   }
 
   return (
@@ -137,7 +141,20 @@ export default function ExportModal({ isOpen, onOpenChange, onExport, onCancel, 
               </div>
 
               <SettingSelect key={`resolution-${isGif}`} label="Resolution" value={resolution} onChange={setResolution} disabled={busy} items={resolutions}
-                description={dims ? `Output: ${dims}` : 'Keeps the aspect ratio; never crops or upscales.'} />
+                description={resolution === 'custom' ? `Exact size; the video is fitted inside with black bars${dims ? ` · Output: ${dims}` : ''}` : dims ? `Output: ${dims}` : 'Keeps the aspect ratio; never crops or upscales.'} />
+
+              {resolution === 'custom' && (
+                <div className="export__settings">
+                  <TextField value={customW} onChange={setCustomW} isDisabled={busy} fullWidth className="export-field">
+                    <Label>Width (px)</Label>
+                    <Input type="number" min={16} max={8192} aria-label="Custom width" onBlur={() => setCustomW(String(custom.width))} />
+                  </TextField>
+                  <TextField value={customH} onChange={setCustomH} isDisabled={busy} fullWidth className="export-field">
+                    <Label>Height (px)</Label>
+                    <Input type="number" min={16} max={8192} aria-label="Custom height" onBlur={() => setCustomH(String(custom.height))} />
+                  </TextField>
+                </div>
+              )}
 
               <div className="export__settings">
                 <SettingSelect key={`fps-${isGif}`} label="Frame rate" value={fps} onChange={setFps} disabled={busy} description={isGif ? 'GIF timing is approximate; playback varies by viewer.' : 'Output frame rate.'}

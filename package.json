@@ -1,6 +1,6 @@
 {
   "name": "showcase-recorder",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "Free, open-source screen recorder and editor for Windows with automatic zoom, smooth cursor and beautiful backgrounds",
   "keywords": ["screen-recorder", "screen-recording", "screencast", "video-editor", "screen-studio-alternative", "auto-zoom", "product-demo", "electron", "windows"],

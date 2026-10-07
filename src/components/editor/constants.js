@@ -112,6 +112,14 @@ export const OUTPUT_SIZES = [
   { id: '9:16', label: 'Vertical', short: '9:16', width: 1080, height: 1920, glyph: [8, 14] },
 ];
 
+export const CUSTOM_MIN = 64, CUSTOM_MAX = 4096;
+/** Canvas size for `edits.output` ({ size, width?, height? }); falls back to the recording. */
+export function outputDims(output, source) {
+  if (output.size === 'custom' && output.width > 0 && output.height > 0) return { width: output.width, height: output.height };
+  const preset = OUTPUT_SIZES.find(o => o.id === output.size);
+  return preset?.width ? { width: preset.width, height: preset.height } : source;
+}
+
 export const MUSIC_TRACKS = [
   { id: 'none', label: 'None' },
   { id: 'calm', label: 'Calm' },

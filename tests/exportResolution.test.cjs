@@ -14,6 +14,17 @@ test('resolution bounds rotate, never upscale and pad MP4 only',async()=>{
  assert.throws(()=>validate({destination:'file',format:'MP4',fps:30,quality:'web',resolution:'480p'}));
  assert.throws(()=>validate({destination:'file',format:'GIF',fps:15,quality:'web',resolution:'bogus'}));
 });
+test('custom size fits the box, may upscale, and is validated',async()=>{
+ const {outputSize}=await import('../electron/exportGeometry.mjs');
+ const {resolutionFilters}=await import('../electron/exportGeometry.mjs');
+ assert.deepEqual(outputSize({width:1920,height:1080},'custom','WebM',{width:1000,height:1000}),{width:1000,height:1000});
+ assert.deepEqual(outputSize({width:1280,height:720},'custom','MP4',{width:3841,height:2160}),{width:3842,height:2160});
+ assert.deepEqual(resolutionFilters({width:1920,height:1080},{resolution:'custom',format:'WebM',customSize:{width:1000,height:1000}}).filters,['scale=1000:563:flags=lanczos','pad=1000:1000:(ow-iw)/2:(oh-ih)/2:black','setsar=1']);
+ const ok={destination:'file',format:'MP4',fps:30,quality:'web',resolution:'custom'};
+ validate({...ok,customSize:{width:800,height:600}});
+ assert.throws(()=>validate(ok));
+ assert.throws(()=>validate({...ok,customSize:{width:4,height:600}}));
+});
 test('both encoders produce advertised sizes, preserve timing and decode after resizing',async()=>{
  const {outputSize}=await import('../electron/exportGeometry.mjs');
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'export-resolution-'));

@@ -8,7 +8,7 @@ import Timeline from './Timeline';
 import VideoPanel from './panels/VideoPanel';
 import BackgroundPanel from './panels/BackgroundPanel';
 import AudioPanel from './panels/AudioPanel';
-import { CAMERA_DEFAULTS, NEW_ZOOM_LENGTH, OUTPUT_SIZES, TRIM_MIN_LENGTH, ZOOM_DEFAULTS, ZOOM_MIN_LENGTH, clamp } from './constants';
+import { CAMERA_DEFAULTS, NEW_ZOOM_LENGTH, outputDims, TRIM_MIN_LENGTH, ZOOM_DEFAULTS, ZOOM_MIN_LENGTH, clamp } from './constants';
 import CameraPanel from './panels/CameraPanel';
 import { Tips } from '../Tips';
 import { loadThumbnails, loadVoicePeaks } from '../../timelineMedia.mjs';
@@ -201,8 +201,7 @@ export default function Editor({ recording, initial = null, onBack, onExport, on
 
   // ---- derived ----
   const source = videoSize || { width: 1920, height: 1080 };
-  const outputOption = OUTPUT_SIZES.find(o => o.id === state.output.size) || OUTPUT_SIZES[0];
-  const output = outputOption.width ? { width: outputOption.width, height: outputOption.height } : source;
+  const output = outputDims(state.output, source);
   const sampleCursor = useMemo(() => editorCursor(recording.events || [], state.cursor.smoothness), [recording.events, state.cursor.smoothness]);
   // Real timeline media: voice peaks (only when the recording has a mic) and filmstrip thumbnails.
   const [media, setMedia] = useState({});
@@ -326,7 +325,7 @@ export default function Editor({ recording, initial = null, onBack, onExport, on
       <Tips set="editor" active={!panel} />
       <div className="editor__frame">
       <EditorHeader name={recording.name} saved={!!state.project.savedAt && !state.dirty}
-        outputSize={state.output.size} output={output} source={source} onOutputSize={size => set('output', { size })}
+        outputSize={state.output.size} output={output} source={source} onOutputSize={(size, dims) => set('output', { size, ...dims })}
         canUndo={state.history.past.length > 0} canRedo={state.history.future.length > 0}
         onUndo={() => dispatch({ type: 'undo' })} onRedo={() => dispatch({ type: 'redo' })}
         projectName={state.project.name} onSave={save} onBack={onBack} onExport={() => {dispatch({type:'pause'});onExport?.(editsFor(state,recording.events), { width: output.width, height: output.height });}} />
