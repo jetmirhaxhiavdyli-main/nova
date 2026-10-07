@@ -41,7 +41,9 @@ const index = path.join(__dirname, '../dist/index.html');
 // Taskbar/window icon when run unpackaged (npm start); packaged builds use the exe's icon (build/icon.png via electron-builder).
 const devIcon = app.isPackaged ? undefined : path.join(__dirname, '../build/icon.png');
 function assertSender(event) { if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('Untrusted request'); }
-function showWindow() { if (!window || window.isDestroyed()) return; if (window.isMinimized()) window.restore(); window.show(); window.focus(); }
+let lastCheck = 0;
+function showWindow() { if (!window || window.isDestroyed()) return; if (Date.now() - lastCheck > 5 * 60 * 1000) { lastCheck = Date.now(); void updates.start(); } // check when the window is opened (throttled)
+   if (window.isMinimized()) window.restore(); window.show(); window.focus(); }
 if(app.isPackaged&&!app.requestSingleInstanceLock())app.quit();
 else app.whenReady().then(() => {
   // Installed builds only: a dev run with the same ID makes Windows create an "Electron" Start shortcut that hijacks the real Nova shortcut.

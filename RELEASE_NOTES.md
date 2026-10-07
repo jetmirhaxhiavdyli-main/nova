@@ -1,3 +1,3 @@
-## Nova 1.2.3
+## Nova 1.2.4
 
-- Updates are now checked every hour while Nova runs in the background, not only at launch.
+- Nova now also checks for updates whenever you open its window from the tray.
