@@ -1,3 +1,3 @@
-## Nova 1.2.4
+## Nova 1.2.5
 
-- Nova now also checks for updates whenever you open its window from the tray.
+- Recording an area with an odd width or height no longer shows a black edge; the last pixel row or column is trimmed instead.

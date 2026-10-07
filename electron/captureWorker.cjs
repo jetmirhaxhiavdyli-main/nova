@@ -45,10 +45,10 @@ async function pickEncoder(ffmpeg,width,height){
 async function startEncoder({ffmpeg,file},fps,width,height){
   const {spawn}=require('node:child_process');
   const enc=await pickEncoder(ffmpeg,width,height),shrink=width>enc.maxWidth;
-  // yuv420p needs even sizes (an odd crop gets a one-pixel edge). One frame is written per 1/fps of recorded time (pauses excluded).
+  // yuv420p needs even sizes (an odd crop loses its last pixel row/column). One frame is written per 1/fps of recorded time (pauses excluded).
   // ponytail: an encoder slower than real time makes the video shorter than the recording.
   const args=['-hide_banner','-loglevel','error','-f','rawvideo','-framerate',String(fps),'-pix_fmt','rgba','-s',`${width}x${height}`,'-i','pipe:0',
-    '-vf',`pad=ceil(iw/2)*2:ceil(ih/2)*2:0:0,scale=${shrink?enc.maxWidth:'iw'}:${shrink?'-2':'ih'}:flags=lanczos+accurate_rnd+full_chroma_int:out_color_matrix=bt709:out_range=tv,format=${enc.pix}`,
+    '-vf',`crop=trunc(iw/2)*2:trunc(ih/2)*2:0:0,scale=${shrink?enc.maxWidth:'iw'}:${shrink?'-2':'ih'}:flags=lanczos+accurate_rnd+full_chroma_int:out_color_matrix=bt709:out_range=tv,format=${enc.pix}`,
     '-c:v',enc.name,...enc.opts,'-g',String(fps),
     '-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-color_range','tv','-f','matroska','-y',file];
   const child=spawn(ffmpeg,args,{windowsHide:true,stdio:['pipe','ignore','pipe']});
