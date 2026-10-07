@@ -1,11 +1,11 @@
 import { springStep } from './spring.mjs';
 
 export const ZOOM_DEFAULTS = Object.freeze({
-  scale: 1.55, holdMs: 2600, returnMs: 2200,
-  zoomSpring: 7, panSpring: 4.5, returnSpring: 5,
+  scale: 1.55, holdMs: 2200, mergeMs: 2500, returnMs: 1200,
+  zoomSpring: 5, panSpring: 3.5, returnSpring: 9,
   // Smaller target steps with a softer follow spring: gradual starts and stops
   // rather than noticeably spaced reframing commands during a cursor sweep.
-  safeInset: 0.22, panIntervalMs: 64, pointerThreshold: 0.008,
+  safeInset: 0.22, panIntervalMs: 350, pointerThreshold: 0.008,
 });
 export const FULL_FRAME = Object.freeze({ x: 0, y: 0, width: 1, height: 1 });
 const clamp = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
@@ -42,9 +42,9 @@ function compile(timeline) {
   const commands = [];
   segments.forEach((s, index) => {
     const nextStart = segments[index + 1]?.start ?? Infinity;
-    const add = (time,target,frequency,settle=false) => commands.push({time,target,frequency,settle: settle || s.instant === true});
+    const add = (time,target,frequency,settle=false,pan=false) => commands.push({time,target,frequency,pan,settle: settle || s.instant === true});
     add(s.start,targetCrop(s.target,s.scale),s.easing.zoom);
-    for (const k of s.keyframes) if (k.time < nextStart) add(k.time,targetCrop(k.target,s.scale),s.easing.pan);
+    for (const k of s.keyframes) if (k.time < nextStart) add(k.time,targetCrop(k.target,s.scale),s.easing.pan,false,true);
     // A later segment owns overlapping time; an older return must not interrupt it.
     if (s.release < nextStart && s.release < duration) add(s.release,{...FULL_FRAME},s.easing.out);
     if (s.end < nextStart && s.end < duration) add(s.end,{...FULL_FRAME},s.easing.out,true);
@@ -56,10 +56,11 @@ function compile(timeline) {
 // resets integration; forward playback advances only across new commands.
 export function createZoomSampler(timeline) {
   const commands = compile(timeline);
-  let value, velocity, target, last, index, frequency;
-  function reset() { value={...FULL_FRAME};velocity={x:0,y:0,width:0,height:0};target={...FULL_FRAME};last=0;index=0;frequency=16; }
+  let value, velocity, target, last, index, frequency, sizeFrequency;
+  function reset() { value={...FULL_FRAME};velocity={x:0,y:0,width:0,height:0};target={...FULL_FRAME};last=0;index=0;frequency=16;sizeFrequency=16; }
   function advance(now) {
-    for (const key of Object.keys(FULL_FRAME)) [value[key],velocity[key]]=springStep(value[key],velocity[key],target[key],(now-last)/1000,frequency);
+    // Size follows the zoom/return spring only: a pan keyframe mid-zoom must not change the zoom speed (that was a visible hitch).
+    for (const key of Object.keys(FULL_FRAME)) [value[key],velocity[key]]=springStep(value[key],velocity[key],target[key],(now-last)/1000,key==='width'||key==='height'?sizeFrequency:frequency);
     last=now;
   }
   reset();
@@ -68,7 +69,7 @@ export function createZoomSampler(timeline) {
     now=clamp(now,0,timeline.duration ?? Infinity);
     if (now<last) reset();
     while(index<commands.length && commands[index].time<=now) {
-      const command=commands[index++];advance(command.time);target=command.target;frequency=command.frequency;
+      const command=commands[index++];advance(command.time);target=command.target;frequency=command.frequency;if(!command.pan)sizeFrequency=command.frequency;
       if(command.settle) {value={...command.target};velocity={x:0,y:0,width:0,height:0};}
     }
     advance(now);
