@@ -439,7 +439,7 @@ function App() {
         <ExportModal exportedPath={exportedPath} sourceFps={sourceFps.current} size={exportSize} isOpen={exportOpen} onOpenChange={open => { if (!exportBusy.current) { setExportOpen(open); if (!open && exportedPath) { setExportedPath(null); resetRecording(); } } }} onExport={runExport} onCancel={cancelExport} busy={busy} note={exportNote} progress={exportProgress} />
       </> : recordingNow ? <>
         {cameraOn && <CameraBubble corner={cameraCorner} onCornerChange={setCameraCorner} stream={camera.stream} disconnected={camera.status === 'disconnected'} />}
-        <div className="dock" {...dockProps}><div className="toolbar-glow toolbar-glow--rec" data-paused={paused || undefined} aria-hidden="true"><span /><span /><span /></div><RecordingHud seconds={seconds} paused={paused} stopping={phase === 'stopping'}
+        <div className="dock" {...dockProps}><RecordingHud seconds={seconds} paused={paused} stopping={phase === 'stopping'}
           onPauseToggle={togglePause} onRestart={restart} onDiscard={discard} onStop={stop} /></div>
       </> : <>
         {panel === 'area' && <AreaSelection rect={area} ratio={areaLock ? areaRatio : preset?.ratio}
@@ -466,7 +466,6 @@ function App() {
           {panel === 'camera' && <CameraPicker {...camera} onSelect={id => inputs?inputs.select('camera',id):setCamera(c=>({...c,selectedId:id}))} onRetry={() => inputs?.retry('camera')} onOpenSettings={bridge?.openPrivacySettings ? () => bridge.openPrivacySettings('camera') : undefined} />}
           {panel === 'mic' && <MicPicker {...mic} onSelect={id => inputs?inputs.select('mic',id):setMic(m=>({...m,selectedId:id}))} onRetry={() => inputs?.retry('mic')} onOpenSettings={bridge?.openPrivacySettings ? () => bridge.openPrivacySettings('microphone') : undefined} />}
           <div className="dock__bar">
-            <div className="toolbar-glow" aria-hidden="true"><span /><span /><span /></div>
             <RecordToolbar activePanel={panel} onPanelChange={setPanel} gripProps={gripProps}
               cameraOn={cameraOn} cameraName={camera.devices.find(d => d.id === camera.selectedId)?.name}
               micOn={micOn} micName={mic.devices.find(d => d.id === mic.selectedId)?.name}
